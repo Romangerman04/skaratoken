@@ -1,25 +1,11 @@
 pragma solidity ^0.4.18;
 
-import 'zeppelin-solidity/contracts/token/BurnableToken.sol';
-import 'zeppelin-solidity/contracts/token/MintableToken.sol';
-import 'zeppelin-solidity/contracts/token/TokenVesting.sol';
+
 import 'zeppelin-solidity/contracts/crowdsale/CappedCrowdsale.sol';
-import './Bonificated.sol';
+import 'zeppelin-solidity/contracts/token/TokenVesting.sol';
 
-
-/**
- * @title SampleCrowdsaleToken
- * @dev Very simple ERC20 Token that can be minted.
- * It is meant to be used in a crowdsale contract.
- */
-contract SkaraToken is BurnableToken, MintableToken {
-
-  string public constant name = "Skara Token";
-  string public constant symbol = "SKA";
-  uint8 public constant decimals = 18;
-
-}
-
+import './BonificatedCrowdsale.sol';
+import './SkaraToken.sol';
 
 /**
  * @title SampleCrowdsale
@@ -32,40 +18,48 @@ contract SkaraToken is BurnableToken, MintableToken {
  * After adding multiple features it's good practice to run integration tests
  * to ensure that subcontracts works together as intended.
  */
-contract SkaraCrowdsale is CappedCrowdsale, Bonificated, TokenVesting {
+//contract SkaraCrowdsale is CappedCrowdsale, BonificatedCrowdsale, TokenVesting {
+contract SkaraCrowdsale is CappedCrowdsale, BonificatedCrowdsale {
 
   //Crowdsale
-  uint256 public constant START_TIME = 1513357165; //  Unix Timestamp. More info at: https://www.unixtimestamp.com/
-  uint256 public constant DURATION = 30 days; //Crowdsale duration
-  uint256 public constant END_TIME = START_TIME + DURATION; //Crowdsale duration
-  uint256 public constant RATE = 1; //SKA per ETH exchange
-  address public constant WALLET = 0x0E56f09FDD14d61E456fbc45C618fD4FF10256e2; //Skara ethereum address
+  //uint256 public constant START_TIME = 1545436800; //  Unix Timestamp. More info at: https://www.unixtimestamp.com/
+  //uint256 public constant DURATION = 30 days; //Crowdsale duration
+  //uint256 public constant END_TIME = START_TIME + DURATION; //Crowdsale duration
+  //uint256 public constant RATE = 1; //SKA per ETH exchange
+  //address public constant WALLET = 0x627306090abab3a6e1400e9345bc60c78a8bef57; //Skara ethereum address
 
   //CappedCrowdsale
-  uint256 public constant CAP = 1000000; //10 M€ on ETH at START_TIME
+  //uint256 public constant CAP = 1000000; //10 M€ on ETH at START_TIME
 
   //Bonificated
-  uint256 public constant BONUS_START_TIME = START_TIME; //Start time for the bonus
-  uint256 public constant BONUS_DURATION = 2 days; //Start time for the bonus
+  //uint256 public constant BONUS_START_TIME = START_TIME; //Start time for the bonus
+  uint256 public constant BONUS_DURATION = 3 days; //Start time for the bonus
   uint256 public constant BONUS_START_VALUE = 15; //Default bonus percentage at BONUS_START_TIME
 
   //CappedCrowdsale
-  uint256 public constant VESTING_START_TIME = START_TIME; //Start time for the vesting
-  uint256 public constant VESTING_CLIF = 90 days; //Start time for the bonus
-  uint256 public constant VESTING_DURATION = 365 days; //Duration of the vesting period
+  //uint256 public constant VESTING_START_TIME = START_TIME; //Start time for the vesting
+  uint256 public constant VESTING_CLIFF = 90 days; //Start time for the bonus
+  uint256 public constant VESTING_DURATION = 800 days; //Duration of the vesting period
 
+  uint256 startTime;
+  // The vesting contract
+  //TokenVesting vesting;
 
-  function SkaraCrowdsale() public
+ mapping (address => TokenVesting) public vestings;
 
-    CappedCrowdsale(CAP)
-    Bonificated(BONUS_START_TIME, BONUS_DURATION, BONUS_START_VALUE)
-    Crowdsale(START_TIME, END_TIME, RATE, WALLET)
-    TokenVesting(WALLET, START_TIME, VESTING_CLIF, VESTING_DURATION, false) 
+  function SkaraCrowdsale(uint256 _cap, uint256 _startTime, uint256 _endTime, uint256 _rate, address _wallet) public
+    CappedCrowdsale(_cap)
+    BonificatedCrowdsale(_startTime, BONUS_DURATION, BONUS_START_VALUE)
+    Crowdsale(_startTime, _endTime, _rate, _wallet)
   {
+    startTime = _startTime;
   }
 
-  // overriding CappedCrowdsale#validPurchase to add extra whitelist logic
-  // @return true if investor is in whitelist
+  function createTokenContract() internal returns (MintableToken) {
+    return new SkaraToken();
+  }
+
+  // overriding Crowdsale#buyTokens to add bonus and vesting logic
   function buyTokens(address beneficiary) public payable {
     require(beneficiary != address(0));
     require(validPurchase());
@@ -75,26 +69,40 @@ contract SkaraCrowdsale is CappedCrowdsale, Bonificated, TokenVesting {
     // calculate token amount to be created
     uint256 tokens = weiAmount.mul(rate);
 
+    //add bonus
+    uint256 currentBonusMultiplier = getBonus(beneficiary).add(10000);
+    tokens = tokens.mul(currentBonusMultiplier).div(10000);
+
     // update state
     weiRaised = weiRaised.add(weiAmount);
 
-    token.mint(beneficiary, tokens);
+    //token.transfer(beneficiary, tokens);
+    
+
+    //vesting setup
+    /*
+    skt.grantVestedTokens(
+      beneficiary, 
+      tokens, 
+      startTime,
+      startTime + VESTING_CLIFF,
+      startTime + VESTING_DURATION, 
+      false, 
+      false);
+    */
+
+    TokenVesting vesting = new TokenVesting(beneficiary, startTime, VESTING_CLIFF, VESTING_DURATION, true);
+    token.transfer(address(vesting), tokens);
+
+    vestings[beneficiary] = vesting;
+
     TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
 
     forwardFunds();
   }
 
-  // overriding CappedCrowdsale#validPurchase to add extra whitelist logic
-  // @return true if investor is in whitelist
-  function validPurchase() internal view returns (bool) {
-    bool withinCap = weiRaised.add(msg.value) <= cap;
-    return super.validPurchase() && withinCap;
-  }
-
-
-
-  function createTokenContract() internal returns (MintableToken) {
-    return new SkaraToken();
+  function getVesting(address beneficiary) public view returns (TokenVesting) {
+    return vestings[beneficiary];
   }
 
 }
