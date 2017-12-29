@@ -86,9 +86,6 @@ contract('Vesting', function ([owner, presaler, bounty, team, someone]) {
     const vestingBalance = await this.token.balanceOf(vestingContractAddress);
     const presealerBalance = await this.token.balanceOf(presaler);
 
-    console.log("vesting balance", vestingBalance);
-    console.log("presaler balance", presealerBalance);
-
     vestingBalance.should.be.bignumber.below(investment*RATE);
     presealerBalance.should.be.bignumber.below(investment*RATE);
     (vestingBalance.add(presealerBalance)).should.be.bignumber.equal(investment*RATE);
@@ -111,9 +108,6 @@ contract('Vesting', function ([owner, presaler, bounty, team, someone]) {
     
     const vestingBalance = await this.token.balanceOf(vestingContractAddress);
     const presealerBalance = await this.token.balanceOf(presaler);
-
-    console.log("vesting balance", vestingBalance);
-    console.log("presaler balance", presealerBalance);
 
     vestingBalance.should.be.bignumber.equal(0);
     presealerBalance.should.be.bignumber.equal(investment*RATE);

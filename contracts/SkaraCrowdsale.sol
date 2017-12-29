@@ -90,13 +90,14 @@ contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, W
 
     //vesting
     if(hasTokenVesting(msg.sender)) {
+      //was previously added to vesting list, already has a vesting config
       TokenVesting vesting = createTokenVesting();
       //mint tokens for vesting contract
       token.mint(vesting, tokens);
     }
     else{
       //mint tokens for beneficiary
-      token.transfer(beneficiary, tokens);
+      token.mint(beneficiary, tokens);
     }
 
     TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
@@ -134,9 +135,10 @@ contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, W
    * @dev Override FinalizableCrowdsale#finalization to add final token allocation
    */
   function finalization() internal {
+    
     uint256 totalSale = token.totalSupply();
-    uint256 total = totalSale.div(SALE_ALLOCATION_PERCENTAGE.div(100));
-    uint256 finalAllocation = FINAL_ALLOCATION_PERCENTAGE.mul(total);
+    uint256 total = totalSale.mul(100).div(SALE_ALLOCATION_PERCENTAGE);
+    uint256 finalAllocation = FINAL_ALLOCATION_PERCENTAGE.mul(total).div(100);
 
     token.mint(this, finalAllocation);
 
