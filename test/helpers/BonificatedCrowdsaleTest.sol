@@ -1,10 +1,10 @@
 pragma solidity ^0.4.18;
 
+import 'zeppelin-solidity/contracts/crowdsale/Crowdsale.sol';
+import '../../contracts/Bonificated.sol';
 
-import '../../contracts/BonificatedCrowdsale.sol';
 
-
-contract BonificatedCrowdsaleTest is BonificatedCrowdsale {
+contract BonificatedCrowdsaleTest is Crowdsale, Bonificated{
 
   function BonificatedCrowdsaleTest (
     uint256 _startTime,
@@ -16,7 +16,7 @@ contract BonificatedCrowdsaleTest is BonificatedCrowdsale {
     uint256 _startBonus
   ) public
     Crowdsale(_startTime, _endTime, _rate, _wallet)
-    BonificatedCrowdsale(_bonusStart, _bonusDuration, _startBonus)
+    Bonificated(_bonusStart, _bonusDuration, _startBonus)
   {
   }
 
