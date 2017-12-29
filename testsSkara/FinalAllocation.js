@@ -51,7 +51,7 @@ contract('FinalAllocation', function ([owner, investor]) {
   });
   
   it('create the correct amount of tokens', async function () {
-    await increaseTimeTo(this.whitelistEnd);
+    await increaseTimeTo(this.whitelistEnd + duration.days(2)); //after bonus
 
     const investment = ether(10);
     await this.crowdsale.buyTokens(investor, {value:investment, from: investor}).should.be.fulfilled;
@@ -61,17 +61,11 @@ contract('FinalAllocation', function ([owner, investor]) {
     const totalSale = await this.token.totalSupply();
     const total = totalSale.mul(100).div(SALE_ALLOCATION_PERCENTAGE);
     const expectedFinalAlocation = (total.mul(FINAL_ALLOCATION_PERCENTAGE).div(100)).floor();
-    
-    var mintEvent = this.token.Mint(
-      function(result, error){
-        if(!error){
-           console.log(result.args);
-        }
-      });
-    
 
     await this.crowdsale.finalize({from:owner}).should.be.fulfilled;
     
+    const crowdsaleBalance = await this.token.balanceOf(this.crowdsale.address);
+    crowdsaleBalance.should.be.bignumber.equal(expectedFinalAlocation);
   });
  
  });

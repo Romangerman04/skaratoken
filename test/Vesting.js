@@ -19,7 +19,7 @@ contract('Vesting', function ([owner, presaler, bounty, team, someone]) {
   const RATE = new BigNumber(10);
   const CAP  = ether(10);
 
-  const PRE_SALER_DURATION = duration.weeks(36);
+  const PRE_SALER_DURATION = duration.weeks(24);
 
   before(async function() {
     //Advance to the next block to correctly read time in the solidity "now" function interpreted by testrpc
@@ -28,7 +28,8 @@ contract('Vesting', function ([owner, presaler, bounty, team, someone]) {
 
   beforeEach(async function () {
 
-    this.startTime = latestTime() + duration.weeks(2);
+    this.beforeStart = latestTime() + duration.minutes(1);
+    this.startTime = this.beforeStart + duration.weeks(2);
     var _duration =   duration.weeks(4);
     this.endTime =   this.startTime + _duration;
     this.afterEndTime = this.endTime + duration.seconds(1);
@@ -47,7 +48,7 @@ contract('Vesting', function ([owner, presaler, bounty, team, someone]) {
   });
 
   it('allow purchase for presaler within boundaries before crowsale start', async function () {
-    await increaseTimeTo(latestTime());
+    await increaseTimeTo(this.beforeStart);
     const investment = ether(1);
 
     await this.crowdsale.setupPresaler(presaler, investment, PRE_SALER_DURATION).should.be.fulfilled;
@@ -61,56 +62,70 @@ contract('Vesting', function ([owner, presaler, bounty, team, someone]) {
   
   it('reject purchase for non presaler before crowsale start', async function () {
     
-    await increaseTimeTo(latestTime());
+    await increaseTimeTo(this.beforeStart);
     const investment = ether(1);
     const boundary = await this.crowdsale.getPresaleBoundary(presaler);
     await this.crowdsale.buyTokens(presaler,  {value: investment, from:presaler}).should.be.rejectedWith(EVMRevert);
   });
 
-  it('allow partial release during vesting', async function () {
-    await increaseTimeTo(latestTime());
-    const investment = ether(1);
-
-    await this.crowdsale.setupPresaler(presaler, investment, PRE_SALER_DURATION).should.be.fulfilled;
-   
-    await this.crowdsale.buyTokens(presaler, {value: investment, from:presaler}).should.be.fulfilled;
-    const vestingContractAddress = await this.crowdsale.getVestingAddress(presaler);
-    console.log("url:", "http://localhost:3000/" + vestingContractAddress + "/" + this.token.address);
-
-    const now = this.vestingStart + PRE_SALER_DURATION/2;
-    await increaseTimeTo(now);
-    
-    const vestingContract = await TokenVesting.at(vestingContractAddress);
-    await vestingContract.release(this.token.address, {form:presaler});
-
-    const vestingBalance = await this.token.balanceOf(vestingContractAddress);
-    const presealerBalance = await this.token.balanceOf(presaler);
-
-    vestingBalance.should.be.bignumber.below(investment*RATE);
-    presealerBalance.should.be.bignumber.below(investment*RATE);
-    (vestingBalance.add(presealerBalance)).should.be.bignumber.equal(investment*RATE);
   
-  });
-
   it('allow total release after vesting', async function () {
-    await increaseTimeTo(latestTime());
+    await increaseTimeTo(this.beforeStart);
     const investment = ether(1);
 
     await this.crowdsale.setupPresaler(presaler, investment, PRE_SALER_DURATION).should.be.fulfilled;
     await this.crowdsale.buyTokens(presaler, {value: investment, from:presaler}).should.be.fulfilled;
     const vestingContractAddress = await this.crowdsale.getVestingAddress(presaler);
-    console.log("url:", "http://localhost:3000/" + vestingContractAddress + "/" + this.token.address);
+    
+    console.log("vestingContractAddress", vestingContractAddress);
     
     await increaseTimeTo(this.vestingStart + PRE_SALER_DURATION);
     
     const vestingContract = await TokenVesting.at(vestingContractAddress);
     await vestingContract.release(this.token.address, {form:presaler});
     
+    const owner = await vestingContract.getOwner()
+    console.log("owner:", owner.address);
+    console.log("url:", "http://localhost:3000/" + vestingContractAddress + "/" + this.token.address);
+    
     const vestingBalance = await this.token.balanceOf(vestingContractAddress);
     const presealerBalance = await this.token.balanceOf(presaler);
 
     vestingBalance.should.be.bignumber.equal(0);
     presealerBalance.should.be.bignumber.equal(investment*RATE);
+
+  });
+
+  it('allow partial release after cliff but before vesting end', async function () {
+    await increaseTimeTo(this.beforeStart);
+    const investment = ether(10);
+
+    await this.crowdsale.setupPresaler(bounty, investment, PRE_SALER_DURATION).should.be.fulfilled;
+   
+    await this.crowdsale.buyTokens(bounty, {value: investment, from:bounty}).should.be.fulfilled;
+    const vestingContractAddress = await this.crowdsale.getVestingAddress(bounty);
+        
+    console.log("vestingContractAddress", vestingContractAddress);
+    
+    const now = this.vestingStart + this.vestingCliff;
+    await increaseTimeTo(now);
+    
+    const vestingContract = await TokenVesting.at(vestingContractAddress);
+    await vestingContract.release(this.token.address, {form:bounty});
+    
+    const owner = await vestingContract.getOwner()
+    console.log("owner:", owner.address);
+    console.log("url:", "http://localhost:3000/" + vestingContractAddress + "/" + this.token.address);
+
+    const vestingBalance = await this.token.balanceOf(vestingContractAddress);
+    const presealerBalance = await this.token.balanceOf(bounty);
+    console.log("vestingBalance", vestingBalance);
+    console.log("presealerBalance", presealerBalance);
+
+    vestingBalance.should.be.bignumber.below(investment*RATE);
+    presealerBalance.should.be.bignumber.below(investment*RATE);
+    (vestingBalance.add(presealerBalance)).should.be.bignumber.equal(investment*RATE);
+  
   });
  });
 

@@ -12,7 +12,7 @@ import 'zeppelin-solidity/contracts/token/BurnableToken.sol';
 contract SkaraToken is MintableToken, BurnableToken {
 
   string public constant name = "Skara Token";
-  string public constant symbol = "SKT";
+  string public constant symbol = "SKRT";
   uint8 public constant decimals = 18;
   
   function SkaraToken() public {
