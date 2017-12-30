@@ -132,12 +132,12 @@ contract('Vesting', function ([owner, presaler, unreleaser, halfreleaser, fullre
     const investment = ether(10);
 
     await this.crowdsale.setupPresaler(unreleaser, investment, PRE_SALER_DURATION).should.be.fulfilled;
-    await this.crowdsale.setupPresaler(halfreleaser, investment, PRE_SALER_DURATION).should.be.fulfilled;
-    await this.crowdsale.setupPresaler(fullreleaser, investment, PRE_SALER_DURATION).should.be.fulfilled;
+    await this.crowdsale.setupPresaler(halfreleaser, investment.add(ether(2)), 2*PRE_SALER_DURATION).should.be.fulfilled;
+    await this.crowdsale.setupPresaler(fullreleaser, investment.add(ether(4)), PRE_SALER_DURATION ).should.be.fulfilled;
    
     await this.crowdsale.buyTokens(unreleaser, {value: investment, from:unreleaser}).should.be.fulfilled;
-    await this.crowdsale.buyTokens(halfreleaser, {value: investment, from:halfreleaser}).should.be.fulfilled;
-    await this.crowdsale.buyTokens(fullreleaser, {value: investment, from:fullreleaser}).should.be.fulfilled;
+    await this.crowdsale.buyTokens(halfreleaser, {value: investment.add(ether(2)), from:halfreleaser}).should.be.fulfilled;
+    await this.crowdsale.buyTokens(fullreleaser, {value: investment.add(ether(4)) , from:fullreleaser}).should.be.fulfilled;
 
     const unreleaserVestingContractAddress = await this.crowdsale.getVestingAddress(unreleaser);
     const halfreleaserVestingContractAddress = await this.crowdsale.getVestingAddress(halfreleaser);
@@ -147,12 +147,9 @@ contract('Vesting', function ([owner, presaler, unreleaser, halfreleaser, fullre
     const halfreleaserVestingContract = await TokenVesting.at(halfreleaserVestingContractAddress);
     const fullreleaserVestingContract = await TokenVesting.at(fullreleaserVestingContractAddress);
    
-    const halfVesting = this.vestingStart + this.vestingCliff;
-    await increaseTimeTo(halfVesting);
+    const now = this.vestingStart + PRE_SALER_DURATION;
+    await increaseTimeTo(now);
     await halfreleaserVestingContract.release(this.token.address, {from:halfreleaser});
-    
-    const fullVesting = this.vestingStart + PRE_SALER_DURATION;
-    await increaseTimeTo(this.fullVesting);
     await fullreleaserVestingContract.release(this.token.address, {from:fullreleaser});
 
     console.log("Ureleased url:", "http://localhost:3000/" + unreleaserVestingContractAddress + "/" + this.token.address);
