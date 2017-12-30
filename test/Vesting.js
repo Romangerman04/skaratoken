@@ -24,6 +24,18 @@ contract('Vesting', function ([owner, presaler, bounty, team, someone]) {
   before(async function() {
     //Advance to the next block to correctly read time in the solidity "now" function interpreted by testrpc
     await advanceBlock()
+
+    this.beforeStart = latestTime() + duration.minutes(1);
+    this.startTime = this.beforeStart + duration.weeks(2);
+    var _duration =   duration.weeks(4);
+    this.endTime =   this.startTime + _duration;
+    this.afterEndTime = this.endTime + duration.seconds(1);
+    
+    this.vestingStart = this.endTime;
+    this.vestingCliff = duration.weeks(12);
+    
+    this.crowdsale = await SkaraCrowdsale.new(CAP, this.startTime,  this.endTime, RATE, owner, {from: owner});
+    this.token = await SkaraToken.at(await this.crowdsale.token());
   })
 
   beforeEach(async function () {
@@ -77,15 +89,13 @@ contract('Vesting', function ([owner, presaler, bounty, team, someone]) {
     await this.crowdsale.buyTokens(presaler, {value: investment, from:presaler}).should.be.fulfilled;
     const vestingContractAddress = await this.crowdsale.getVestingAddress(presaler);
     
-    console.log("vestingContractAddress", vestingContractAddress);
+    console.log("crowdsaleAddress", this.crowdsale.address);
     
     await increaseTimeTo(this.vestingStart + PRE_SALER_DURATION);
     
     const vestingContract = await TokenVesting.at(vestingContractAddress);
     await vestingContract.release(this.token.address, {form:presaler});
     
-    const owner = await vestingContract.getOwner()
-    console.log("owner:", owner.address);
     console.log("url:", "http://localhost:3000/" + vestingContractAddress + "/" + this.token.address);
     
     const vestingBalance = await this.token.balanceOf(vestingContractAddress);
@@ -113,8 +123,6 @@ contract('Vesting', function ([owner, presaler, bounty, team, someone]) {
     const vestingContract = await TokenVesting.at(vestingContractAddress);
     await vestingContract.release(this.token.address, {form:bounty});
     
-    const owner = await vestingContract.getOwner()
-    console.log("owner:", owner.address);
     console.log("url:", "http://localhost:3000/" + vestingContractAddress + "/" + this.token.address);
 
     const vestingBalance = await this.token.balanceOf(vestingContractAddress);

@@ -14,11 +14,11 @@ const should = require('chai')
 const SkaraCrowdsale = artifacts.require('SkaraCrowdsale');
 const SkaraToken = artifacts.require('SkaraToken');
 
-contract('BonificatedCrowdsale', function ([owner, wallet, investor]) {
+contract('Bonificated', function ([owner, wallet, investor]) {
     const START_BONUS = new BigNumber(15);
 
-    const RATE = new BigNumber(500);
-    const CAP  = ether(1);
+    const RATE = new BigNumber(10);
+    const CAP  = ether(10);
     
     before(async function() {
       //Advance to the next block to correctly read time in the solidity "now" function interpreted by testrpc
@@ -50,28 +50,26 @@ contract('BonificatedCrowdsale', function ([owner, wallet, investor]) {
     });
 
     it('purchase on start open bonus period', async function () {
-      const investment = 1;
+      const investment = ether(1);
       const tokensNoBonus = investment*RATE;
-      const investmentEth = ether(investment);
 
       await increaseTimeTo(this.openBonusStart);
       
       const bonus = await this.crowdsale.getBonus(investor);
-      await this.crowdsale.buyTokens(investor, {value: investmentEth, from: investor}).should.be.fulfilled;
+      await this.crowdsale.buyTokens(investor, {value: investment, from: investor}).should.be.fulfilled;
       
       const expectedTokens = Math.floor(tokensNoBonus + tokensNoBonus*bonus/10000);
       const balance = await this.token.balanceOf(investor);
       balance.should.be.bignumber.equal(expectedTokens);
     });
 
-    it('purchase during bonus period', async function () {
-      const investment = 1;
-      const investmentEth = ether(investment);
+    it('purchase during open bonus period', async function () {
+      const investment = ether(1);
       const tokensNoBonus = investment*RATE;
 
       await increaseTimeTo(this.openBonusStart + duration.hours(12));
       const bonus = await this.crowdsale.getBonus(investor);
-      await this.crowdsale.buyTokens(investor, {value: investmentEth, from: investor}).should.be.fulfilled;
+      await this.crowdsale.buyTokens(investor, {value: investment, from: investor}).should.be.fulfilled;
       
       const expectedTokens = Math.floor(tokensNoBonus + tokensNoBonus*bonus/10000);
 
@@ -80,13 +78,12 @@ contract('BonificatedCrowdsale', function ([owner, wallet, investor]) {
     });
 
     it('purchase after bonus period', async function () {
-      const investment = 1;
-      const investmentEth = ether(investment);
+      const investment = ether(1);
       const tokensNoBonus = investment*RATE;
 
       await increaseTimeTo(this.afterBonusEnd);
       const bonus = await this.crowdsale.getBonus(investor);
-      const tokensReceived = await this.crowdsale.buyTokens(investor, {value: investmentEth, from: investor}).should.be.fulfilled;
+      const tokensReceived = await this.crowdsale.buyTokens(investor, {value: investment, from: investor}).should.be.fulfilled;
      
       const balance = await this.token.balanceOf(investor);
       balance.should.be.bignumber.equal(tokensNoBonus);

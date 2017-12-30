@@ -11,7 +11,7 @@ import 'zeppelin-solidity/contracts/token/TokenVesting.sol';
 
 contract VestingManager is Ownable {
   
-  event TokenVestingCreated(address beneficiary, uint256 duration, address vestingContract);
+  event TokenVestingCreated(address beneficiary, uint256 duration, address vestingContract, address owner);
 
   uint256 startVesting;
 
@@ -42,7 +42,7 @@ contract VestingManager is Ownable {
     VestingConfig storage config = vestingConfigs[msg.sender];
     TokenVesting vesting = new TokenVesting(msg.sender, startVesting, config.cliff, config.duration, config.revocable);
     vestings[msg.sender] = vesting;
-    TokenVestingCreated(msg.sender, config.duration, vesting);
+    TokenVestingCreated(msg.sender, config.duration, vesting, vesting.owner());
 
     return vesting;
   }
