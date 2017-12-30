@@ -15,9 +15,9 @@ const SkaraCrowdsale = artifacts.require('SkaraCrowdsale');
 const SkaraToken = artifacts.require('SkaraToken');
 const TokenVesting = artifacts.require('TokenVesting');
 
-contract('Vesting', function ([owner, presaler, bounty, team, someone]) {
+contract('Vesting', function ([owner, presaler, unreleaser, halfreleaser, fullreleaser]) {
   const RATE = new BigNumber(10);
-  const CAP  = ether(10);
+  const CAP  = ether(100);
 
   const PRE_SALER_DURATION = duration.weeks(24);
 
@@ -89,15 +89,11 @@ contract('Vesting', function ([owner, presaler, bounty, team, someone]) {
     await this.crowdsale.buyTokens(presaler, {value: investment, from:presaler}).should.be.fulfilled;
     const vestingContractAddress = await this.crowdsale.getVestingAddress(presaler);
     
-    console.log("crowdsaleAddress", this.crowdsale.address);
-    
     await increaseTimeTo(this.vestingStart + PRE_SALER_DURATION);
     
     const vestingContract = await TokenVesting.at(vestingContractAddress);
     await vestingContract.release(this.token.address, {form:presaler});
-    
-    console.log("url:", "http://localhost:3000/" + vestingContractAddress + "/" + this.token.address);
-    
+       
     const vestingBalance = await this.token.balanceOf(vestingContractAddress);
     const presealerBalance = await this.token.balanceOf(presaler);
 
@@ -110,30 +106,59 @@ contract('Vesting', function ([owner, presaler, bounty, team, someone]) {
     await increaseTimeTo(this.beforeStart);
     const investment = ether(10);
 
-    await this.crowdsale.setupPresaler(bounty, investment, PRE_SALER_DURATION).should.be.fulfilled;
+    await this.crowdsale.setupPresaler(presaler, investment, PRE_SALER_DURATION).should.be.fulfilled;
    
-    await this.crowdsale.buyTokens(bounty, {value: investment, from:bounty}).should.be.fulfilled;
-    const vestingContractAddress = await this.crowdsale.getVestingAddress(bounty);
-        
-    console.log("vestingContractAddress", vestingContractAddress);
-    
+    await this.crowdsale.buyTokens(presaler, {value: investment, from:presaler}).should.be.fulfilled;
+    const vestingContractAddress = await this.crowdsale.getVestingAddress(presaler);
+            
     const now = this.vestingStart + this.vestingCliff;
     await increaseTimeTo(now);
     
     const vestingContract = await TokenVesting.at(vestingContractAddress);
-    await vestingContract.release(this.token.address, {form:bounty});
+    await vestingContract.release(this.token.address, {form:presaler});
     
-    console.log("url:", "http://localhost:3000/" + vestingContractAddress + "/" + this.token.address);
-
     const vestingBalance = await this.token.balanceOf(vestingContractAddress);
-    const presealerBalance = await this.token.balanceOf(bounty);
-    console.log("vestingBalance", vestingBalance);
-    console.log("presealerBalance", presealerBalance);
+    const presealerBalance = await this.token.balanceOf(presaler);
 
     vestingBalance.should.be.bignumber.below(investment*RATE);
     presealerBalance.should.be.bignumber.below(investment*RATE);
     (vestingBalance.add(presealerBalance)).should.be.bignumber.equal(investment*RATE);
   
   });
+
+  it('inspectable vestings through webapp', async function () {
+    
+    await increaseTimeTo(this.beforeStart);
+    const investment = ether(10);
+
+    await this.crowdsale.setupPresaler(unreleaser, investment, PRE_SALER_DURATION).should.be.fulfilled;
+    await this.crowdsale.setupPresaler(halfreleaser, investment, PRE_SALER_DURATION).should.be.fulfilled;
+    await this.crowdsale.setupPresaler(fullreleaser, investment, PRE_SALER_DURATION).should.be.fulfilled;
+   
+    await this.crowdsale.buyTokens(unreleaser, {value: investment, from:unreleaser}).should.be.fulfilled;
+    await this.crowdsale.buyTokens(halfreleaser, {value: investment, from:halfreleaser}).should.be.fulfilled;
+    await this.crowdsale.buyTokens(fullreleaser, {value: investment, from:fullreleaser}).should.be.fulfilled;
+
+    const unreleaserVestingContractAddress = await this.crowdsale.getVestingAddress(unreleaser);
+    const halfreleaserVestingContractAddress = await this.crowdsale.getVestingAddress(halfreleaser);
+    const fullreleaserVestingContractAddress = await this.crowdsale.getVestingAddress(fullreleaser);
+    
+    const unreleaserVestingContract = await TokenVesting.at(unreleaserVestingContractAddress);
+    const halfreleaserVestingContract = await TokenVesting.at(halfreleaserVestingContractAddress);
+    const fullreleaserVestingContract = await TokenVesting.at(fullreleaserVestingContractAddress);
+   
+    const halfVesting = this.vestingStart + this.vestingCliff;
+    await increaseTimeTo(halfVesting);
+    await halfreleaserVestingContract.release(this.token.address, {from:halfreleaser});
+    
+    const fullVesting = this.vestingStart + PRE_SALER_DURATION;
+    await increaseTimeTo(this.fullVesting);
+    await fullreleaserVestingContract.release(this.token.address, {from:fullreleaser});
+
+    console.log("Ureleased url:", "http://localhost:3000/" + unreleaserVestingContractAddress + "/" + this.token.address);
+    console.log("Half released url:", "http://localhost:3000/" + halfreleaserVestingContractAddress + "/" + this.token.address);
+    console.log("Full released url:", "http://localhost:3000/" + fullreleaserVestingContractAddress + "/" + this.token.address);
+  });
+
  });
 

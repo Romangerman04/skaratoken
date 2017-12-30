@@ -14,7 +14,7 @@ const should = require('chai')
 const SkaraCrowdsale = artifacts.require('SkaraCrowdsale');
 const SkaraToken = artifacts.require('SkaraToken');
 
-contract('Bonificated', function ([owner, wallet, investor]) {
+contract('Bonificated', function ([owner, investor]) {
     const START_BONUS = new BigNumber(15);
 
     const RATE = new BigNumber(10);
@@ -46,8 +46,64 @@ contract('Bonificated', function ([owner, wallet, investor]) {
       this.crowdsale = await SkaraCrowdsale.new(CAP, this.startTime,  this.endTime, RATE, owner, {from: owner});
       this.token = await SkaraToken.at(await this.crowdsale.token());
 
-      //await this.token.mint(this.crowdsale.address, TOKEN_AMOUNT, { from: owner });
     });
+
+    it('purchase on whitelist bonus period: day one', async function () {
+      
+      const investment = ether(1);
+      await this.crowdsale.addToDayOne(investor, investment, {from: owner}).should.be.fulfilled;
+      
+      const tokensNoBonus = investment*RATE;
+
+      await increaseTimeTo(this.whitelistStart);
+      
+      const bonus = await this.crowdsale.getBonus(investor);
+      await this.crowdsale.buyTokens(investor, {value: investment, from: investor}).should.be.fulfilled;
+      
+      const expectedTokens = Math.floor(tokensNoBonus + tokensNoBonus*bonus/10000);
+      const balance = await this.token.balanceOf(investor);
+      balance.should.be.bignumber.equal(expectedTokens);
+    });
+
+    it('reject non whitelisted purchase on whitelist bonus period: day one', async function () {
+      
+      const investment = ether(1);
+      const tokensNoBonus = investment*RATE;
+
+      await increaseTimeTo(this.whitelistStart);
+      
+      const bonus = await this.crowdsale.getBonus(investor);
+      await this.crowdsale.buyTokens(investor, {value: investment, from: investor}).should.be.rejectedWith(EVMRevert);
+    });
+
+    it('purchase on whitelist bonus period: day two', async function () {
+      
+      const investment = ether(1);
+      await this.crowdsale.addToDayTwo(investor, {from: owner}).should.be.fulfilled;
+
+      const tokensNoBonus = investment*RATE;
+
+      await increaseTimeTo(this.whitelistDayTwoStart);
+      
+      const bonus = await this.crowdsale.getBonus(investor);
+      await this.crowdsale.buyTokens(investor, {value: investment, from: investor}).should.be.fulfilled;
+      
+      const expectedTokens = Math.floor(tokensNoBonus + tokensNoBonus*bonus/10000);
+      const balance = await this.token.balanceOf(investor);
+      balance.should.be.bignumber.equal(expectedTokens);
+    });
+
+    it('reject non whitelisted purchase on whitelist bonus period: day two', async function () {
+      
+      const investment = ether(1);
+      const tokensNoBonus = investment*RATE;
+
+      await increaseTimeTo(this.whitelistDayTwoStart);
+      
+      const bonus = await this.crowdsale.getBonus(investor);
+      await this.crowdsale.buyTokens(investor, {value: investment, from: investor}).should.be.rejectedWith(EVMRevert);
+    });
+    
 
     it('purchase on start open bonus period', async function () {
       const investment = ether(1);

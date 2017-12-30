@@ -40,17 +40,17 @@ contract('FinalAllocation', function ([owner, investor]) {
     this.token = await SkaraToken.at(await this.crowdsale.token());
   });
 
-  it('reject token creation before sale ends', async function () {
+  it('reject final token allocation before sale ends', async function () {
     await increaseTimeTo(this.startTime);
     await this.crowdsale.finalize().should.be.rejectedWith(EVMRevert);
   });
 
-  it('accept token creation after sale ends', async function () {
+  it('accept final token allocation after sale ends', async function () {
     await increaseTimeTo(this.afterEndTime);
     await this.crowdsale.finalize({from:owner}).should.be.fulfilled;
   });
   
-  it('create the correct amount of tokens', async function () {
+  it('allocate the correct amount of tokens', async function () {
     await increaseTimeTo(this.whitelistEnd + duration.days(2)); //after bonus
 
     const investment = ether(10);
