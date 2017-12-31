@@ -14,7 +14,7 @@ const should = require('chai')
 const SkaraCrowdsale = artifacts.require('SkaraCrowdsale');
 const SkaraToken = artifacts.require('SkaraToken');
 
-contract('Bonificated', function ([owner, investor]) {
+contract('Bonificated', function ([owner, investor, presaler]) {
     const START_BONUS = new BigNumber(15);
 
     const RATE = new BigNumber(10);
@@ -48,6 +48,27 @@ contract('Bonificated', function ([owner, investor]) {
 
     });
 
+    it('purchase on presale with custom bonus', async function () {
+      const investment = ether(1);
+      const customBonus = 21;
+      const vestingDuration = duration.weeks(48);
+      
+      await this.crowdsale.setupPresaler(presaler, investment, vestingDuration, customBonus, {from:owner}).should.be.fulfilled;
+      
+      const tokensNoBonus = investment*RATE;
+      
+      const bonus = await this.crowdsale.getBonus(presaler);
+      console.log("bonus", bonus);
+      await this.crowdsale.buyTokens(presaler, {value: investment, from: presaler}).should.be.fulfilled;
+      
+      const expectedTokens = Math.floor(tokensNoBonus + tokensNoBonus*bonus/10000);
+
+      const vestingContractAddress = await this.crowdsale.getVestingAddress(presaler);
+      const balance = await this.token.balanceOf(vestingContractAddress);
+      balance.should.be.bignumber.equal(expectedTokens);
+      balance.should.be.bignumber.above(tokensNoBonus);
+    });
+
     it('purchase on whitelist bonus period: day one', async function () {
       
       const investment = ether(1);
@@ -63,6 +84,7 @@ contract('Bonificated', function ([owner, investor]) {
       const expectedTokens = Math.floor(tokensNoBonus + tokensNoBonus*bonus/10000);
       const balance = await this.token.balanceOf(investor);
       balance.should.be.bignumber.equal(expectedTokens);
+      balance.should.be.bignumber.above(tokensNoBonus);
     });
 
     it('reject non whitelisted purchase on whitelist bonus period: day one', async function () {
@@ -91,6 +113,7 @@ contract('Bonificated', function ([owner, investor]) {
       const expectedTokens = Math.floor(tokensNoBonus + tokensNoBonus*bonus/10000);
       const balance = await this.token.balanceOf(investor);
       balance.should.be.bignumber.equal(expectedTokens);
+      balance.should.be.bignumber.above(tokensNoBonus);
     });
 
     it('reject non whitelisted purchase on whitelist bonus period: day two', async function () {

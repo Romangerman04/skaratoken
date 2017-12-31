@@ -56,14 +56,20 @@ contract('Vesting', function ([owner, presaler, unreleaser, halfreleaser, fullre
   it('add presaler before crowsale start', async function () {
     const investment = ether(1);
     await increaseTimeTo(latestTime() );
-    await this.crowdsale.setupPresaler(presaler, investment, PRE_SALER_DURATION).should.be.fulfilled;
+    await this.crowdsale.setupPresaler(presaler, investment, PRE_SALER_DURATION, 0).should.be.fulfilled;
+  });
+
+  it('reject add presaler from no owner', async function () {
+    const investment = ether(1);
+    await increaseTimeTo(latestTime() );
+    await this.crowdsale.setupPresaler(presaler, investment, PRE_SALER_DURATION, 0, {from:presaler}).should.be.rejectedWith(EVMRevert);
   });
 
   it('allow purchase for presaler within boundaries before crowsale start', async function () {
     await increaseTimeTo(this.beforeStart);
     const investment = ether(1);
 
-    await this.crowdsale.setupPresaler(presaler, investment, PRE_SALER_DURATION).should.be.fulfilled;
+    await this.crowdsale.setupPresaler(presaler, investment, PRE_SALER_DURATION, 0).should.be.fulfilled;
 
     await this.crowdsale.buyTokens(presaler, {value: investment, from:presaler}).should.be.fulfilled;
     const vestingContractAddress = await this.crowdsale.getVestingAddress(presaler);
@@ -85,7 +91,7 @@ contract('Vesting', function ([owner, presaler, unreleaser, halfreleaser, fullre
     await increaseTimeTo(this.beforeStart);
     const investment = ether(1);
 
-    await this.crowdsale.setupPresaler(presaler, investment, PRE_SALER_DURATION).should.be.fulfilled;
+    await this.crowdsale.setupPresaler(presaler, investment, PRE_SALER_DURATION, 0).should.be.fulfilled;
     await this.crowdsale.buyTokens(presaler, {value: investment, from:presaler}).should.be.fulfilled;
     const vestingContractAddress = await this.crowdsale.getVestingAddress(presaler);
     
@@ -106,7 +112,7 @@ contract('Vesting', function ([owner, presaler, unreleaser, halfreleaser, fullre
     await increaseTimeTo(this.beforeStart);
     const investment = ether(10);
 
-    await this.crowdsale.setupPresaler(presaler, investment, PRE_SALER_DURATION).should.be.fulfilled;
+    await this.crowdsale.setupPresaler(presaler, investment, PRE_SALER_DURATION, 0).should.be.fulfilled;
    
     await this.crowdsale.buyTokens(presaler, {value: investment, from:presaler}).should.be.fulfilled;
     const vestingContractAddress = await this.crowdsale.getVestingAddress(presaler);
@@ -131,9 +137,9 @@ contract('Vesting', function ([owner, presaler, unreleaser, halfreleaser, fullre
     await increaseTimeTo(this.beforeStart);
     const investment = ether(10);
 
-    await this.crowdsale.setupPresaler(unreleaser, investment, PRE_SALER_DURATION).should.be.fulfilled;
-    await this.crowdsale.setupPresaler(halfreleaser, investment.add(ether(2)), 2*PRE_SALER_DURATION).should.be.fulfilled;
-    await this.crowdsale.setupPresaler(fullreleaser, investment.add(ether(4)), PRE_SALER_DURATION ).should.be.fulfilled;
+    await this.crowdsale.setupPresaler(unreleaser, investment, PRE_SALER_DURATION, 0).should.be.fulfilled;
+    await this.crowdsale.setupPresaler(halfreleaser, investment.add(ether(2)), 2*PRE_SALER_DURATION, 0).should.be.fulfilled;
+    await this.crowdsale.setupPresaler(fullreleaser, investment.add(ether(4)), PRE_SALER_DURATION, 0).should.be.fulfilled;
    
     await this.crowdsale.buyTokens(unreleaser, {value: investment, from:unreleaser}).should.be.fulfilled;
     await this.crowdsale.buyTokens(halfreleaser, {value: investment.add(ether(2)), from:halfreleaser}).should.be.fulfilled;

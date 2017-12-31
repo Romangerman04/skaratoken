@@ -25,8 +25,13 @@ contract Bonificated is Ownable {
   //add custom bonus for pre sale investors 
   //uint bonus rate (27% => 27)
   function addCustomBonus(address investor, uint256 bonus) public onlyOwner {
+    _addCustomBonus(investor, bonus);
+  }
+
+  function _addCustomBonus(address investor, uint256 bonus) internal {
     customBonuses[investor] = bonus;
   }
+
 
   function removeCustomBonus(address investor) public onlyOwner {
     delete customBonuses[investor];

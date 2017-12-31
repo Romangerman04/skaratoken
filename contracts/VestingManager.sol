@@ -34,9 +34,14 @@ contract VestingManager is Ownable {
   mapping(address => TokenVesting) vestings; 
 
   function addVestingConfig(address who, uint256 _cliff, uint256 _duration, bool _revocable) public onlyOwner {
+    _addVestingConfig(who, _cliff, _duration, _revocable);
+  }
+
+  function _addVestingConfig(address who, uint256 _cliff, uint256 _duration, bool _revocable) internal {
     VestingConfig memory config = VestingConfig(_cliff,  _duration,  _revocable);
     vestingConfigs[who] = config;
   }
+
 
   function createTokenVesting() public onlyVester returns(TokenVesting) {
     VestingConfig storage config = vestingConfigs[msg.sender];

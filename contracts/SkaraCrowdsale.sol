@@ -105,21 +105,26 @@ contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, W
     
   }
 
-  function setupPresaler(address who, uint256 amount, uint256 vestingDuration) public {
-    addVestingConfig(who, PRE_SALE_VESTING_CLIFF, vestingDuration, false);
+  function setupPresaler(address who, uint256 amount, uint256 vestingDuration, uint256 bonus) public onlyOwner {
     _addPresaler(who, amount);
+    _addVestingConfig(who, PRE_SALE_VESTING_CLIFF, vestingDuration, false);
+    _addCustomBonus(who, bonus);
   }
 
-  function addBountyMember(address who) public {
-    addVestingConfig(who, PRE_SALE_VESTING_CLIFF, BOUNTY_VESTING_DURATION, false);
+  function addBountyMember(address who) public onlyOwner {
+    _addVestingConfig(who, BOUNTY_VESTING_CLIFF, BOUNTY_VESTING_DURATION, false);
   }
 
-  function addTeamMember(address who) public {
-    addVestingConfig(who, PRE_SALE_VESTING_CLIFF, TEAM_VESTING_DURATION, true);
+  function addTeamMember(address who) public onlyOwner {
+    _addVestingConfig(who, TEAM_VESTING_CLIFF, TEAM_VESTING_DURATION, true);
   }
 
-  // Override CappedCrowdsale#validPurchase to add presale logic
-  //@return true if the transaction can buy tokens
+  /**
+  * Override CappedCrowdsale#validPurchase to add presale logic (allow buyTokens before _startTime)
+  * has to check manually CappedCrowdsale#validPurchase (and other inheritances) 
+  * since inheritance chain is broken in presale cases
+  * @return true if the transaction can buy tokens
+  */
   function validPurchase() internal view returns (bool) {
     bool nonZeroPurchase = msg.value != 0;
     bool withinCap = weiRaised.add(msg.value) <= cap;
