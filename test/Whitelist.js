@@ -75,6 +75,18 @@ contract('Whitelist', function ([owner, wallet, investor]) {
     await this.crowdsale.buyTokens(investor, {value: investment, from: investor}).should.be.fulfilled;
   });
 
+  it('investors on day one automatically added to day two whitelist ', async function () {
+    const boundary = ether(2);
+    await this.crowdsale.addToDayOne(investor, boundary, {from: owner}).should.be.fulfilled;
+
+    await increaseTimeTo(this.whitelistStart);
+    const investment = boundary - ether(1);
+    await this.crowdsale.buyTokens(investor, {value: investment, from: investor}).should.be.fulfilled;
+ 
+    const addedToDayTwo = await this.crowdsale.isWhitelistedOnDayTwo(investor);
+    addedToDayTwo.should.be.true;
+  });
+
   it('reject payments outside boundaries from whitelisted on day one ', async function () {
     const boundary = ether(1);
 

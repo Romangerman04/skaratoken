@@ -58,7 +58,6 @@ contract('Bonificated', function ([owner, investor, presaler]) {
       const tokensNoBonus = investment*RATE;
       
       const bonus = await this.crowdsale.getBonus(presaler);
-      console.log("bonus", bonus);
       await this.crowdsale.buyTokens(presaler, {value: investment, from: presaler}).should.be.fulfilled;
       
       const expectedTokens = Math.floor(tokensNoBonus + tokensNoBonus*bonus/10000);

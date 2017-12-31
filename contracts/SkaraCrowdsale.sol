@@ -61,22 +61,16 @@ contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, W
   // overriding Crowdsale#buyTokens to add presale, whitelist and bonus logic
   function buyTokens(address beneficiary) public payable {
     require(beneficiary != address(0));
+    require(validPurchase()); 
 
     uint256 weiAmount = msg.value;
     
     //handle whitelist logic
-    if(isWhitelistPeriod()) {
-      require(isWhitelisted(msg.sender));
-      
-      if(isDayOne()) {
-        uint256 senderBoundary = getBoundary(msg.sender);
-        require(weiAmount <= senderBoundary);
-        _addToDayTwo(msg.sender);
-      }
+    if(isDayOne()) {
+      uint256 senderBoundary = getBoundary(msg.sender);
+      require(weiAmount <= senderBoundary);
+      _addToDayTwo(msg.sender);
     }
-      
-    require(validPurchase()); 
-
     
     // calculate token amount to be created
     uint256 tokens = weiAmount.mul(rate);
@@ -133,6 +127,10 @@ contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, W
       return nonZeroPurchase && withinCap;
     } 
     
+    if(isWhitelistPeriod()) {
+      require(isWhitelisted(msg.sender));
+    }
+
     return super.validPurchase();
   }
   

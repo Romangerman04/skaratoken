@@ -32,7 +32,7 @@ contract Whitelist is Ownable {
     _addToDayTwo(investor);
   }
 
-  function _addToDayTwo(address investor) internal  {
+  function _addToDayTwo(address investor) internal {
     dayTwoWhitelist[investor] = cap;
   }
 
