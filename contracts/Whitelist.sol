@@ -49,6 +49,9 @@ contract Whitelist is Ownable {
   }
 
 
+  /** 
+  * the investment boundary predefined when  investor added to whitelis
+  */
   function getBoundary(address investor) public view returns (uint256) {
     require(isWhitelistPeriod());
     require(isWhitelisted(investor));
@@ -59,6 +62,19 @@ contract Whitelist is Ownable {
  
     return cap;
   }
+
+  /** 
+  * the investment boundary is updated after every purchase 
+  * in case the investor purchases again
+  */
+  function _updateBoundary(address investor, uint256 alreadyInvested) internal {
+    require(isWhitelisted(investor));
+
+    if(isDayOne()) {
+      dayOneWhitelist[investor] = dayOneWhitelist[investor] - alreadyInvested;
+    }
+  }
+
 
   function isWhitelistPeriod() public view returns (bool) {
     return _inWindow(startWhitelisting, 2 days);

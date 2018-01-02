@@ -66,7 +66,7 @@ contract('Whitelist', function ([owner, wallet, investor]) {
     await this.crowdsale.addToDayTwo(investor, {from: owner}).should.be.fulfilled;
   });
 
-  it('accept payments within boundaries from whitelisted on day one ', async function () {
+  it('accept payment within boundaries from whitelisted on day one ', async function () {
     const boundary = ether(2);
     await this.crowdsale.addToDayOne(investor, boundary, {from: owner}).should.be.fulfilled;
 
@@ -74,6 +74,38 @@ contract('Whitelist', function ([owner, wallet, investor]) {
     const investment = boundary - ether(1);
     await this.crowdsale.buyTokens(investor, {value: investment, from: investor}).should.be.fulfilled;
   });
+
+  it('accept multiple payments within boundaries from whitelisted on day one ', async function () {
+    const boundary = ether(2);
+    await this.crowdsale.addToDayOne(investor, boundary, {from: owner}).should.be.fulfilled;
+    
+    await increaseTimeTo(this.whitelistStart);
+    const storedBoundary = await this.crowdsale.getBoundary(investor);
+    const investment = boundary - ether(1);
+    await this.crowdsale.buyTokens(investor, {value: investment, from: investor}).should.be.fulfilled;
+
+    await increaseTimeTo(this.whitelistStart + duration.hours(4));
+    const updatedBoundary = await this.crowdsale.getBoundary(investor);
+    const remainingInvestment = boundary - investment;
+    await this.crowdsale.buyTokens(investor, {value: remainingInvestment, from: investor}).should.be.fulfilled;
+
+    updatedBoundary.should.be.bignumber.below(boundary);
+  });
+
+  it('reject multiple payments outside boundaries from whitelisted on day one ', async function () {
+    const boundary = ether(3);
+    await this.crowdsale.addToDayOne(investor, boundary, {from: owner}).should.be.fulfilled;
+
+    await increaseTimeTo(this.whitelistStart);
+    const investment = boundary - ether(1);
+    await this.crowdsale.buyTokens(investor, {value: investment, from: investor}).should.be.fulfilled;
+
+    await increaseTimeTo(this.whitelistStart + duration.hours(4));
+    const remainingInvestment = boundary;
+    await this.crowdsale.buyTokens(investor, {value: remainingInvestment, from: investor}).should.be.rejectedWith(EVMRevert);
+
+  });
+
 
   it('investors on day one automatically added to day two whitelist ', async function () {
     const boundary = ether(2);

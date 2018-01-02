@@ -77,6 +77,7 @@ contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, W
     if(isDayOne()) {
       uint256 senderBoundary = getBoundary(msg.sender);
       require(weiAmount <= senderBoundary);
+      _updateBoundary(msg.sender, weiAmount);
       _addToDayTwo(msg.sender);
     }
     
