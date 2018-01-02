@@ -14,7 +14,7 @@ const should = require('chai')
 const SkaraCrowdsale = artifacts.require('SkaraCrowdsale');
 const SkaraToken = artifacts.require('SkaraToken');
 
-contract('FinalAllocation', function ([owner, investor]) {
+contract('Finalization', function ([owner, investor]) {
   const RATE = new BigNumber(10);
   const CAP  = ether(100);
   const SALE_ALLOCATION_PERCENTAGE  = 63;
@@ -57,15 +57,37 @@ contract('FinalAllocation', function ([owner, investor]) {
     await this.crowdsale.buyTokens(investor, {value:investment, from: investor}).should.be.fulfilled;
 
     await increaseTimeTo(this.afterEndTime);
+    
+    const totalSale = await this.token.totalSupply();
+    const total = totalSale.mul(100).div(SALE_ALLOCATION_PERCENTAGE);
+    const expectedFinalAlocation = (total.mul(FINAL_ALLOCATION_PERCENTAGE).div(100)).floor();
+    
+    await this.crowdsale.finalize({from:owner}).should.be.fulfilled;
+    const crowdsaleBalance = await this.token.balanceOf(this.crowdsale.address);
+    crowdsaleBalance.should.be.bignumber.equal(expectedFinalAlocation);
+  });
+  it('allow claim rest after finalization cooldown', async function () {
+    await increaseTimeTo(this.whitelistEnd + duration.days(2)); //after bonus
+
+    const investment = ether(10);
+    await this.crowdsale.buyTokens(investor, {value:investment, from: investor}).should.be.fulfilled;
+
+    await increaseTimeTo(this.afterEndTime);
 
     const totalSale = await this.token.totalSupply();
     const total = totalSale.mul(100).div(SALE_ALLOCATION_PERCENTAGE);
     const expectedFinalAlocation = (total.mul(FINAL_ALLOCATION_PERCENTAGE).div(100)).floor();
 
     await this.crowdsale.finalize({from:owner}).should.be.fulfilled;
-    
+
     const crowdsaleBalance = await this.token.balanceOf(this.crowdsale.address);
     crowdsaleBalance.should.be.bignumber.equal(expectedFinalAlocation);
+
+    await increaseTimeTo(this.afterEndTime + duration.weeks(12));
+    
+    await this.crowdsale.claimRest({from:owner});
+    const ownerBalance = await this.token.balanceOf(owner);
+    ownerBalance.should.be.bignumber.equal(expectedFinalAlocation);
   });
  
  });

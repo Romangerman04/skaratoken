@@ -40,18 +40,26 @@ contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, W
   uint256 public constant TEAM_VESTING_CLIFF = 12 weeks; 
   uint256 public constant TEAM_VESTING_DURATION = 1 years; 
 
-  //final allocation
+  //finalization
   uint256 public constant SALE_ALLOCATION_PERCENTAGE = 63; 
   uint256 public constant FINAL_ALLOCATION_PERCENTAGE = 37; 
+  uint256 public constant FINALIZATION_COOLDOWN = 12 weeks; 
   
-  function SkaraCrowdsale(uint256 _cap, uint256 _startTime, uint256 _endTime, uint256 _rate, address _wallet) public
+  address skaraWallet;
+  uint256 endTime;
+
+  event FinalClaim(uint256 amount);
+
+  function SkaraCrowdsale(uint256 _cap, uint256 _startTime, uint256 _endTime, uint256 _rate, address _skaraWallet) public
     CappedCrowdsale(_cap)
     FinalizableCrowdsale()
     Whitelist(_startTime, _cap)
     Bonificated(_startTime, BONUS_DURATION, BONUS_START_VALUE)
-    Crowdsale(_startTime, _endTime, _rate, _wallet)
+    Crowdsale(_startTime, _endTime, _rate, _skaraWallet)
     VestingManager(_endTime)
   {
+    skaraWallet = _skaraWallet;
+    endTime = _endTime;
   }
 
   function createTokenContract() internal returns (MintableToken) {
@@ -146,6 +154,17 @@ contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, W
     token.mint(this, finalAllocation);
 
     super.finalization();
+  }
+
+  /**
+  * Transfer of this contract to skara after FINALIZATION_COOLDOWN
+  */
+  function claimRest() public onlyOwner {
+    require(now >= (endTime + FINALIZATION_COOLDOWN));
+    uint256 thisBalance = token.balanceOf(this);
+
+    token.transfer(skaraWallet, thisBalance);
+    FinalClaim(thisBalance);
   }
 
 
