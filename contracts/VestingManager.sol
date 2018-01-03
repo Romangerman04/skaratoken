@@ -43,11 +43,11 @@ contract VestingManager is Ownable {
   }
 
 
-  function createTokenVesting() public onlyVester returns(TokenVesting) {
-    VestingConfig storage config = vestingConfigs[msg.sender];
-    TokenVesting vesting = new TokenVesting(msg.sender, startVesting, config.cliff, config.duration, config.revocable);
-    vestings[msg.sender] = vesting;
-    TokenVestingCreated(msg.sender, config.duration, vesting, vesting.owner());
+  function createTokenVesting(address beneficiary) public onlyVester returns(TokenVesting) {
+    VestingConfig storage config = vestingConfigs[beneficiary];
+    TokenVesting vesting = new TokenVesting(beneficiary, startVesting, config.cliff, config.duration, config.revocable);
+    vestings[beneficiary] = vesting;
+    TokenVestingCreated(beneficiary, config.duration, vesting, vesting.owner());
 
     return vesting;
   }

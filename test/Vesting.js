@@ -77,6 +77,19 @@ contract('Vesting', function ([owner, presaler, unreleaser, halfreleaser, fullre
     const vestingBalance = await this.token.balanceOf(vestingContractAddress);
     vestingBalance.should.be.bignumber.equal(investment*RATE);
   });
+
+  it('allow purchase in behalf of presaler within boundaries before crowsale start', async function () {
+    await increaseTimeTo(this.beforeStart);
+    const investment = ether(1);
+
+    await this.crowdsale.setupPresaler(presaler, investment, PRE_SALER_DURATION, 0, {from:owner}).should.be.fulfilled;
+
+    await this.crowdsale.buyTokens(presaler, {value: investment, from:presaler}).should.be.fulfilled;
+    const vestingContractAddress = await this.crowdsale.getVestingAddress(presaler);
+
+    const vestingBalance = await this.token.balanceOf(vestingContractAddress);
+    vestingBalance.should.be.bignumber.equal(investment*RATE);
+  });
   
   it('reject purchase for non presaler before crowsale start', async function () {
     

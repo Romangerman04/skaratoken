@@ -70,31 +70,32 @@ contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, W
   function buyTokens(address beneficiary) public payable {
     require(beneficiary != address(0));
     require(validPurchase()); 
+    require(validBeneficiary(beneficiary)); 
 
     uint256 weiAmount = msg.value;
     
     //handle whitelist logic
     if(isDayOne()) {
-      uint256 senderBoundary = getBoundary(msg.sender);
-      require(weiAmount <= senderBoundary);
-      _updateBoundary(msg.sender, weiAmount);
-      _addToDayTwo(msg.sender);
+      uint256 beneficiaryBoundary = getBoundary(beneficiary);
+      require(weiAmount <= beneficiaryBoundary);
+      _updateBoundary(beneficiary, weiAmount);
+      _addToDayTwo(beneficiary);
     }
     
     // calculate token amount to be created
     uint256 tokens = weiAmount.mul(rate);
 
     //add bonus
-    uint256 currentBonusMultiplier = getBonus(msg.sender).add(10000);
+    uint256 currentBonusMultiplier = getBonus(beneficiary).add(10000);
     tokens = tokens.mul(currentBonusMultiplier).div(10000);
     
     //update state
     weiRaised = weiRaised.add(weiAmount);
 
     //vesting
-    if(hasTokenVesting(msg.sender)) {
+    if(hasTokenVesting(beneficiary)) {
       //was previously added to vesting list, already has a vesting config
-      TokenVesting vesting = createTokenVesting();
+      TokenVesting vesting = createTokenVesting(beneficiary);
       //mint tokens for vesting contract
       token.mint(vesting, tokens);
     }
@@ -129,20 +130,34 @@ contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, W
   * @return true if the transaction can buy tokens
   */
   function validPurchase() internal view returns (bool) {
-    bool nonZeroPurchase = msg.value != 0;
-    bool withinCap = weiRaised.add(msg.value) <= cap;
-    
-    if(isPresaler(msg.sender)) {
-      return nonZeroPurchase && withinCap;
-    } 
-    
-    if(isWhitelistPeriod()) {
-      require(isWhitelisted(msg.sender));
-    }
 
+    if(now < startTime){
+      //presale
+      bool nonZeroPurchase = msg.value != 0;
+      bool withinCap = weiRaised.add(msg.value) <= cap;
+      
+      return nonZeroPurchase && withinCap;
+    }
     return super.validPurchase();
   }
   
+
+  /** 
+  * Handles beneficiaries in diferent sale periods
+  * @return true if the beneficiary can buy tokens
+  */
+  function validBeneficiary(address beneficiary) internal view returns (bool) {
+    if(now < startTime) {
+      return isPresaler(beneficiary);
+    } 
+    
+    if(isWhitelistPeriod()) {
+      return isWhitelisted(beneficiary);
+    }
+
+    return true;
+  }
+
   /**
    * @dev Override FinalizableCrowdsale#finalization to add final token allocation
    */
