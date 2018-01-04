@@ -174,6 +174,15 @@ contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, W
     super.finalization();
   }
 
+  function claim() public onlyOwner {
+    require(now >= (endTime + FINALIZATION_COOLDOWN));
+    uint256 thisBalance = token.balanceOf(this);
+
+    token.transfer(skaraWallet, thisBalance);
+    FinalClaim(thisBalance);
+  }
+
+
   /**
   * Transfer of this contract to skara after FINALIZATION_COOLDOWN
   */
