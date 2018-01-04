@@ -15,7 +15,6 @@ const SkaraCrowdsale = artifacts.require('SkaraCrowdsale');
 const SkaraToken = artifacts.require('SkaraToken');
 
 contract('Bonificated', function ([owner, investor, presaler]) {
-    const START_BONUS = new BigNumber(15);
 
     const RATE = new BigNumber(10);
     const CAP  = ether(10);
@@ -60,7 +59,7 @@ contract('Bonificated', function ([owner, investor, presaler]) {
       const bonus = await this.crowdsale.getBonus(presaler);
       await this.crowdsale.buyTokens(presaler, {value: investment, from: presaler}).should.be.fulfilled;
       
-      const expectedTokens = Math.floor(tokensNoBonus + tokensNoBonus*bonus/10000);
+      const expectedTokens = Math.floor(tokensNoBonus + tokensNoBonus*bonus/100);
 
       const vestingContractAddress = await this.crowdsale.getVestingAddress(presaler);
       const balance = await this.token.balanceOf(vestingContractAddress);
@@ -71,6 +70,7 @@ contract('Bonificated', function ([owner, investor, presaler]) {
     it('purchase on whitelist bonus period: day one', async function () {
       
       const investment = ether(1);
+      const expectedBonus = new BigNumber(15);
       await this.crowdsale.addToDayOne(investor, investment, {from: owner}).should.be.fulfilled;
       
       const tokensNoBonus = investment*RATE;
@@ -78,14 +78,35 @@ contract('Bonificated', function ([owner, investor, presaler]) {
       await increaseTimeTo(this.whitelistStart);
       
       const bonus = await this.crowdsale.getBonus(investor);
+      bonus.should.be.bignumber.equal(expectedBonus);
       await this.crowdsale.buyTokens(investor, {value: investment, from: investor}).should.be.fulfilled;
       
-      const expectedTokens = Math.floor(tokensNoBonus + tokensNoBonus*bonus/10000);
+      const expectedTokens = Math.floor(tokensNoBonus + tokensNoBonus*expectedBonus/100);
       const balance = await this.token.balanceOf(investor);
       balance.should.be.bignumber.equal(expectedTokens);
       balance.should.be.bignumber.above(tokensNoBonus);
     });
 
+
+    it('purchase on whitelist bonus period: day one + 12h', async function () {
+      
+      const investment = ether(1);
+      const expectedBonus = new BigNumber(15);
+      await this.crowdsale.addToDayOne(investor, investment, {from: owner}).should.be.fulfilled;
+      
+      const tokensNoBonus = investment*RATE;
+
+      await increaseTimeTo(this.whitelistStart + duration.hours(12));
+      
+      const bonus = await this.crowdsale.getBonus(investor);
+      bonus.should.be.bignumber.equal(expectedBonus);
+      await this.crowdsale.buyTokens(investor, {value: investment, from: investor}).should.be.fulfilled;
+      
+      const expectedTokens = Math.floor(tokensNoBonus + tokensNoBonus*expectedBonus/100);
+      const balance = await this.token.balanceOf(investor);
+      balance.should.be.bignumber.equal(expectedTokens);
+      balance.should.be.bignumber.above(tokensNoBonus);
+    });
     it('reject non whitelisted purchase on whitelist bonus period: day one', async function () {
       
       const investment = ether(1);
@@ -100,6 +121,7 @@ contract('Bonificated', function ([owner, investor, presaler]) {
     it('purchase on whitelist bonus period: day two', async function () {
       
       const investment = ether(1);
+      const expectedBonus = new BigNumber(10);
       await this.crowdsale.addToDayTwo(investor, {from: owner}).should.be.fulfilled;
 
       const tokensNoBonus = investment*RATE;
@@ -107,17 +129,40 @@ contract('Bonificated', function ([owner, investor, presaler]) {
       await increaseTimeTo(this.whitelistDayTwoStart);
       
       const bonus = await this.crowdsale.getBonus(investor);
+      bonus.should.be.bignumber.equal(expectedBonus);
       await this.crowdsale.buyTokens(investor, {value: investment, from: investor}).should.be.fulfilled;
       
-      const expectedTokens = Math.floor(tokensNoBonus + tokensNoBonus*bonus/10000);
+      const expectedTokens = Math.floor(tokensNoBonus + tokensNoBonus*bonus/100);
       const balance = await this.token.balanceOf(investor);
       balance.should.be.bignumber.equal(expectedTokens);
       balance.should.be.bignumber.above(tokensNoBonus);
     });
 
+    it('purchase on whitelist bonus period: day two + 12h', async function () {
+      
+      const investment = ether(1);
+      const expectedBonus = new BigNumber(10);
+      await this.crowdsale.addToDayTwo(investor, {from: owner}).should.be.fulfilled;
+
+      const tokensNoBonus = investment*RATE;
+
+      await increaseTimeTo(this.whitelistDayTwoStart + duration.hours(12));
+      
+      const bonus = await this.crowdsale.getBonus(investor);
+      bonus.should.be.bignumber.equal(expectedBonus);
+      await this.crowdsale.buyTokens(investor, {value: investment, from: investor}).should.be.fulfilled;
+      
+      const expectedTokens = Math.floor(tokensNoBonus + tokensNoBonus*bonus/100);
+      const balance = await this.token.balanceOf(investor);
+      balance.should.be.bignumber.equal(expectedTokens);
+      balance.should.be.bignumber.above(tokensNoBonus);
+    });
+
+
     it('reject non whitelisted purchase on whitelist bonus period: day two', async function () {
       
       const investment = ether(1);
+      const expectedBonus = new BigNumber(5);
       const tokensNoBonus = investment*RATE;
 
       await increaseTimeTo(this.whitelistDayTwoStart);
@@ -127,33 +172,38 @@ contract('Bonificated', function ([owner, investor, presaler]) {
     });
     
 
-    it('purchase on start open bonus period', async function () {
+    it('purchase on start open bonus period : day three', async function () {
       const investment = ether(1);
+      const expectedBonus = new BigNumber(5);
       const tokensNoBonus = investment*RATE;
 
       await increaseTimeTo(this.openBonusStart);
       
       const bonus = await this.crowdsale.getBonus(investor);
+      bonus.should.be.bignumber.equal(expectedBonus);
       await this.crowdsale.buyTokens(investor, {value: investment, from: investor}).should.be.fulfilled;
       
-      const expectedTokens = Math.floor(tokensNoBonus + tokensNoBonus*bonus/10000);
+      const expectedTokens = Math.floor(tokensNoBonus + tokensNoBonus*expectedBonus/100);
       const balance = await this.token.balanceOf(investor);
       balance.should.be.bignumber.equal(expectedTokens);
     });
 
     it('purchase during open bonus period', async function () {
       const investment = ether(1);
+      const expectedBonus = new BigNumber(5);
       const tokensNoBonus = investment*RATE;
 
       await increaseTimeTo(this.openBonusStart + duration.hours(12));
+      
       const bonus = await this.crowdsale.getBonus(investor);
+      bonus.should.be.bignumber.equal(expectedBonus);
       await this.crowdsale.buyTokens(investor, {value: investment, from: investor}).should.be.fulfilled;
       
-      const expectedTokens = Math.floor(tokensNoBonus + tokensNoBonus*bonus/10000);
-
+      const expectedTokens = Math.floor(tokensNoBonus + tokensNoBonus*expectedBonus/100);
       const balance = await this.token.balanceOf(investor);
       balance.should.be.bignumber.equal(expectedTokens);
     });
+
 
     it('purchase after bonus period', async function () {
       const investment = ether(1);

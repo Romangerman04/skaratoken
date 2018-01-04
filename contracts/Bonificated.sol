@@ -12,14 +12,24 @@ contract Bonificated is Ownable {
 
   uint256 public bonusStartTime;
   uint256 public bonusDuration;
-  uint256 public startBonusRate; 
+  uint256 public bonusDayOne; 
+  uint256 public bonusDayTwo; 
+  uint256 public bonusDayThree; 
 
   mapping(address => uint256) customBonuses; 
 
-  function Bonificated(uint256 _bonusStartTime, uint _bonusDuration, uint _startBonusRate) public {
+  function Bonificated(
+    uint256 _bonusStartTime,
+    uint256 _bonusDuration, 
+    uint256 _bonusDayOne,
+    uint256 _bonusDayTwo,
+    uint256 _bonusDayThree) public 
+  {
     bonusStartTime = _bonusStartTime;
     bonusDuration = _bonusDuration;
-    startBonusRate = _startBonusRate;
+    bonusDayOne = _bonusDayOne;
+    bonusDayTwo = _bonusDayTwo;
+    bonusDayThree = _bonusDayThree;
   }
 
   //add custom bonus for pre sale investors 
@@ -37,13 +47,15 @@ contract Bonificated is Ownable {
     delete customBonuses[investor];
   }
 
-  //return truncated(bonus rate *100) (i.e 35,589% => 3558)
+  //return bonus rate *100 (i.e 35% => 35)
   function getBonus(address investor) public view returns (uint256) {
     uint256 customBonus = customBonuses[investor];
-    if(customBonus != 0) return customBonus.mul(100);
+    if(customBonus != 0) return customBonus;
     
     if(now < bonusStartTime || now >= bonusStartTime.add(bonusDuration)) return 0;
 
-    return startBonusRate.mul(100).mul(bonusDuration.sub(now.sub(bonusStartTime))).div(bonusDuration);
+    if(now < bonusStartTime + 1 days) return bonusDayOne;
+    if(now < bonusStartTime + 2 days) return bonusDayTwo;
+    if(now < bonusStartTime + 3 days) return bonusDayThree;
   }
 }

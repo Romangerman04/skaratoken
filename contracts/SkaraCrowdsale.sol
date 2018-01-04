@@ -29,7 +29,9 @@ contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, W
 
   //Bonificated
   uint256 public constant BONUS_DURATION = 3 days; 
-  uint256 public constant BONUS_START_VALUE = 15; //Default bonus percentage at BONUS_START_TIME
+  uint256 public constant BONUS_DAY_ONE = 15; 
+  uint256 public constant BONUS_DAY_TWO = 10; 
+  uint256 public constant BONUS_DAY_THREE = 5; 
 
   //vesting
   uint256 public constant PRE_SALE_VESTING_CLIFF = 12 weeks; 
@@ -54,7 +56,7 @@ contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, W
     CappedCrowdsale(_cap)
     FinalizableCrowdsale()
     Whitelist(_startTime, _cap)
-    Bonificated(_startTime, BONUS_DURATION, BONUS_START_VALUE)
+    Bonificated(_startTime, BONUS_DURATION, BONUS_DAY_ONE, BONUS_DAY_TWO, BONUS_DAY_THREE)
     Crowdsale(_startTime, _endTime, _rate, _skaraWallet)
     VestingManager(_endTime)
   {
@@ -86,8 +88,8 @@ contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, W
     uint256 tokens = weiAmount.mul(rate);
 
     //add bonus
-    uint256 currentBonusMultiplier = getBonus(beneficiary).add(10000);
-    tokens = tokens.mul(currentBonusMultiplier).div(10000);
+    uint256 currentBonusMultiplier = getBonus(beneficiary).add(100);
+    tokens = tokens.mul(currentBonusMultiplier).div(100);
     
     //update state
     weiRaised = weiRaised.add(weiAmount);
@@ -131,7 +133,7 @@ contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, W
   */
   function validPurchase() internal view returns (bool) {
 
-    if(now < startTime){
+    if(now < startTime) {
       //presale
       bool nonZeroPurchase = msg.value != 0;
       bool withinCap = weiRaised.add(msg.value) <= cap;

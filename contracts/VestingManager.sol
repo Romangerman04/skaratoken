@@ -33,13 +33,13 @@ contract VestingManager is Ownable {
   mapping(address => VestingConfig) vestingConfigs; 
   mapping(address => TokenVesting) vestings; 
 
-  function addVestingConfig(address who, uint256 _cliff, uint256 _duration, bool _revocable) public onlyOwner {
-    _addVestingConfig(who, _cliff, _duration, _revocable);
+  function addVestingConfig(address beneficiary, uint256 _cliff, uint256 _duration, bool _revocable) public onlyOwner {
+    _addVestingConfig(beneficiary, _cliff, _duration, _revocable);
   }
 
-  function _addVestingConfig(address who, uint256 _cliff, uint256 _duration, bool _revocable) internal {
+  function _addVestingConfig(address beneficiary, uint256 _cliff, uint256 _duration, bool _revocable) internal {
     VestingConfig memory config = VestingConfig(_cliff,  _duration,  _revocable);
-    vestingConfigs[who] = config;
+    vestingConfigs[beneficiary] = config;
   }
 
 
@@ -52,11 +52,11 @@ contract VestingManager is Ownable {
     return vesting;
   }
 
-  function hasTokenVesting(address who) public view returns(bool) {
-    return vestingConfigs[who].cliff != 0;
+  function hasTokenVesting(address beneficiary) public view returns(bool) {
+    return vestingConfigs[beneficiary].cliff != 0;
   }
 
-  function getVestingAddress(address who) public view returns(TokenVesting) {
-    return vestings[who];
+  function getVestingAddress(address beneficiary) public view returns(TokenVesting) {
+    return vestings[beneficiary];
   }
 }
