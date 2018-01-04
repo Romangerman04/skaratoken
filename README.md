@@ -41,5 +41,4 @@ Sale:
 - [Bonificated.sol](contracts/Bonificated.sol): The bonus manager.
 
 Game:
-- [SkaraEconomyDriver.sol](contracts/SkaraEconomyDriver.sol): A draft for the future game economy manager. Currently shows the token burning feature
-BonificatedBonificated
+- [SkaraEconomyDriver.sol](contracts/SkaraEconomyDriver.sol): A draft of the future game economy manager. Currently shows the token burning feature
