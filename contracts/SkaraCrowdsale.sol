@@ -8,6 +8,7 @@ import './Whitelist.sol';
 import './SkaraToken.sol';
 import './VestingManager.sol';
 import './PreSale.sol';
+import './PostSale.sol';
 
 /**
  * @title SampleCrowdsale
@@ -21,11 +22,12 @@ import './PreSale.sol';
  * to ensure that subcontracts works together as intended.
  */
 //contract SkaraCrowdsale is CappedCrowdsale, BonificatedCrowdsale, TokenVesting {
-contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, Whitelist, VestingManager, PreSale { 
+contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, Whitelist, VestingManager, PreSale, PostSale { 
   using SafeMath for uint256;
 
   //Whitelist
   uint256 public constant WHITELIST_DURATION = 2 days; 
+  uint256 public constant DEFAULT_BOUNDARY = 5 ether; 
 
   //Bonificated
   uint256 public constant BONUS_DURATION = 3 days; 
@@ -36,26 +38,28 @@ contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, W
   //vesting
   uint256 public constant PRE_SALE_VESTING_CLIFF = 12 weeks; 
 
-  uint256 public constant BOUNTY_VESTING_CLIFF = 12 weeks; 
-  uint256 public constant BOUNTY_VESTING_DURATION = 1 years; 
+  uint256 public constant ADVISORS_VESTING_CLIFF = 12 weeks; 
+  uint256 public constant ADVISORS_VESTING_DURATION = 2 years; 
 
-  uint256 public constant TEAM_VESTING_CLIFF = 12 weeks; 
-  uint256 public constant TEAM_VESTING_DURATION = 1 years; 
+  uint256 public constant TEAM_VESTING_CLIFF = 3 years;  
+  uint256 public constant TEAM_VESTING_DURATION = 3 years; //no vesting period, just lockup
 
   //finalization
-  uint256 public constant SALE_ALLOCATION_PERCENTAGE = 63; 
-  uint256 public constant FINAL_ALLOCATION_PERCENTAGE = 37; 
-  uint256 public constant FINALIZATION_COOLDOWN = 12 weeks; 
+  uint256 public constant SALE_ALLOCATION_PERCENTAGE = 70; 
+  uint256 public constant POSTSALE_ALLOCATION_PERCENTAGE = 30; 
+  uint256 public constant SAFETY_ALLOCATION = 1000;  //since postsale claimable token amounts may be rounded, a few tokens are allocated to handle decimal deviations
   
   address skaraWallet;
   uint256 endTime;
+  mapping(address => uint256) postsalers; //post sale token beneficiaries
 
+  
   event FinalClaim(uint256 amount);
 
   function SkaraCrowdsale(uint256 _cap, uint256 _startTime, uint256 _endTime, uint256 _rate, address _skaraWallet) public
     CappedCrowdsale(_cap)
     FinalizableCrowdsale()
-    Whitelist(_startTime, _cap)
+    Whitelist(_startTime, _cap, DEFAULT_BOUNDARY)
     Bonificated(_startTime, BONUS_DURATION, BONUS_DAY_ONE, BONUS_DAY_TWO, BONUS_DAY_THREE)
     Crowdsale(_startTime, _endTime, _rate, _skaraWallet)
     VestingManager(_endTime)
@@ -117,12 +121,18 @@ contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, W
     _addCustomBonus(who, bonus);
   }
 
-  function addBountyMember(address who) public onlyOwner {
-    _addVestingConfig(who, BOUNTY_VESTING_CLIFF, BOUNTY_VESTING_DURATION, false);
+  function addTeamMember(address who, uint256 amount) public onlyOwner {
+    _addPostsaler(who, amount);
+    _addVestingConfig(who, TEAM_VESTING_CLIFF, TEAM_VESTING_DURATION, true);
   }
 
-  function addTeamMember(address who) public onlyOwner {
-    _addVestingConfig(who, TEAM_VESTING_CLIFF, TEAM_VESTING_DURATION, true);
+  function addAdvisor(address who, uint256 amount) public onlyOwner {
+    _addPostsaler(who, amount);
+    _addVestingConfig(who, ADVISORS_VESTING_CLIFF, ADVISORS_VESTING_DURATION, false);
+  }
+
+  function addBountyMember(address who, uint256 amount) public onlyOwner {
+    _addPostsaler(who, amount);
   }
 
   /**
@@ -167,33 +177,37 @@ contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, W
     
     uint256 totalSale = token.totalSupply();
     uint256 total = totalSale.mul(100).div(SALE_ALLOCATION_PERCENTAGE);
-    uint256 finalAllocation = FINAL_ALLOCATION_PERCENTAGE.mul(total).div(100);
-
-    token.mint(this, finalAllocation);
+    
+    uint256 postsalersAllocation = POSTSALE_ALLOCATION_PERCENTAGE.mul(total).div(100);
+    uint256 finalAllocation = postsalersAllocation.add(SAFETY_ALLOCATION);
+    
+    _setupPostSale(finalAllocation);
 
     super.finalization();
   }
 
-  function claim() public onlyOwner {
-    require(now >= (endTime + FINALIZATION_COOLDOWN));
-    uint256 thisBalance = token.balanceOf(this);
+  function claimFromPostsaler(address who) public {
+    require(hasEnded());
+    require(getReleasableAmount() > 0);
+    require(isPostsaler(who));
+  
+    uint256 tokens = getPostsalerAmount(who);
+    require(tokens > 0);
 
-    token.transfer(skaraWallet, thisBalance);
-    FinalClaim(thisBalance);
+    //vesting
+    if(hasTokenVesting(who)) {
+      //was previously added to vesting list, already has a vesting config
+      TokenVesting vesting = createTokenVesting(who);
+      //mint tokens for vesting contract
+      token.mint(vesting, tokens);
+    }
+    else {
+      //mint tokens for beneficiary
+      token.mint(who, tokens);
+    }
+    
+    _finishPostsaleClaim(who, tokens); //will log the token claim and prevent future claims 
   }
-
-
-  /**
-  * Transfer of this contract to skara after FINALIZATION_COOLDOWN
-  */
-  function claimRest() public onlyOwner {
-    require(now >= (endTime + FINALIZATION_COOLDOWN));
-    uint256 thisBalance = token.balanceOf(this);
-
-    token.transfer(skaraWallet, thisBalance);
-    FinalClaim(thisBalance);
-  }
-
-
+  
 }
 

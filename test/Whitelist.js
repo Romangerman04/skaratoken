@@ -17,6 +17,7 @@ const SkaraToken = artifacts.require('SkaraToken');
 contract('Whitelist', function ([owner, wallet, investor]) {
   const RATE = new BigNumber(500);
   const CAP  = ether(10);
+  const DEFAULT_BOUNDARY  = ether(5);
 
   before(async function() {
     //Advance to the next block to correctly read time in the solidity "now" function interpreted by testrpc
@@ -56,63 +57,87 @@ contract('Whitelist', function ([owner, wallet, investor]) {
   });
   
   it('add investor to day one whitelist', async function () {
-    const boundary = ether(1);
-    await this.crowdsale.addToDayOne(investor, boundary, {from: owner}).should.be.fulfilled;
+    await this.crowdsale.addToDayOne(investor, {from: owner}).should.be.fulfilled;
+
+  });
+
+  it('add investor to day one whitelist with custom boundary', async function () {
+    const boundary = ether(7);
+    await this.crowdsale.addToDayOneWithCustomBoundary(investor, boundary, {from: owner}).should.be.fulfilled;
 
   });
 
   it('manually add investor to day two whitelist', async function () {
-    const boundary = ether(1);
     await this.crowdsale.addToDayTwo(investor, {from: owner}).should.be.fulfilled;
   });
 
   it('accept payment within boundaries from whitelisted on day one ', async function () {
-    const boundary = ether(2);
-    await this.crowdsale.addToDayOne(investor, boundary, {from: owner}).should.be.fulfilled;
+    await this.crowdsale.addToDayOne(investor, {from: owner}).should.be.fulfilled;
 
     await increaseTimeTo(this.whitelistStart);
-    const investment = boundary - ether(1);
+    const investment = ether(1);
+    await this.crowdsale.buyTokens(investor, {value: investment, from: investor}).should.be.fulfilled;
+  });
+
+  it('accept payment within custom boundaries from whitelisted on day one ', async function () {
+    const boundary = ether(7);
+    await this.crowdsale.addToDayOneWithCustomBoundary(investor, boundary, {from: owner}).should.be.fulfilled;
+
+    await increaseTimeTo(this.whitelistStart);
+    const investment = ether(4);
     await this.crowdsale.buyTokens(investor, {value: investment, from: investor}).should.be.fulfilled;
   });
 
   it('accept multiple payments within boundaries from whitelisted on day one ', async function () {
-    const boundary = ether(2);
-    await this.crowdsale.addToDayOne(investor, boundary, {from: owner}).should.be.fulfilled;
+    await this.crowdsale.addToDayOne(investor, {from: owner}).should.be.fulfilled;
     
     await increaseTimeTo(this.whitelistStart);
     const storedBoundary = await this.crowdsale.getBoundary(investor);
-    const investment = boundary - ether(1);
+    const investment = ether(4);
     await this.crowdsale.buyTokens(investor, {value: investment, from: investor}).should.be.fulfilled;
 
     await increaseTimeTo(this.whitelistStart + duration.hours(4));
     const updatedBoundary = await this.crowdsale.getBoundary(investor);
-    const remainingInvestment = boundary - investment;
+    const remainingInvestment = ether(1);
     await this.crowdsale.buyTokens(investor, {value: remainingInvestment, from: investor}).should.be.fulfilled;
 
-    updatedBoundary.should.be.bignumber.below(boundary);
+    updatedBoundary.should.be.bignumber.below(DEFAULT_BOUNDARY);
   });
 
   it('reject multiple payments outside boundaries from whitelisted on day one ', async function () {
-    const boundary = ether(3);
-    await this.crowdsale.addToDayOne(investor, boundary, {from: owner}).should.be.fulfilled;
+    await this.crowdsale.addToDayOne(investor, {from: owner}).should.be.fulfilled;
 
     await increaseTimeTo(this.whitelistStart);
-    const investment = boundary - ether(1);
+    const investment = ether(4);
     await this.crowdsale.buyTokens(investor, {value: investment, from: investor}).should.be.fulfilled;
 
     await increaseTimeTo(this.whitelistStart + duration.hours(4));
-    const remainingInvestment = boundary;
-    await this.crowdsale.buyTokens(investor, {value: remainingInvestment, from: investor}).should.be.rejectedWith(EVMRevert);
+    const otherInvestment = ether(5);
+    await this.crowdsale.buyTokens(investor, {value: otherInvestment, from: investor}).should.be.rejectedWith(EVMRevert);
 
   });
 
 
-  it('investors on day one automatically added to day two whitelist ', async function () {
-    const boundary = ether(2);
-    await this.crowdsale.addToDayOne(investor, boundary, {from: owner}).should.be.fulfilled;
+  it('reject multiple payments outside custom boundaries from whitelisted on day one ', async function () {
+    const boundary = ether(7);
+    await this.crowdsale.addToDayOneWithCustomBoundary(investor, boundary, {from: owner}).should.be.fulfilled;
 
     await increaseTimeTo(this.whitelistStart);
-    const investment = boundary - ether(1);
+    const investment = ether(4);
+    await this.crowdsale.buyTokens(investor, {value: investment, from: investor}).should.be.fulfilled;
+
+    await increaseTimeTo(this.whitelistStart + duration.hours(4));
+    const otherInvestment = boundary;
+    await this.crowdsale.buyTokens(investor, {value: otherInvestment, from: investor}).should.be.rejectedWith(EVMRevert);
+
+  });
+
+
+  it('purchasers on day one automatically added to day two whitelist ', async function () {
+    await this.crowdsale.addToDayOne(investor, {from: owner}).should.be.fulfilled;
+
+    await increaseTimeTo(this.whitelistStart);
+    const investment = ether(4);
     await this.crowdsale.buyTokens(investor, {value: investment, from: investor}).should.be.fulfilled;
  
     const addedToDayTwo = await this.crowdsale.isWhitelistedOnDayTwo(investor);
@@ -120,29 +145,25 @@ contract('Whitelist', function ([owner, wallet, investor]) {
   });
 
   it('reject payments outside boundaries from whitelisted on day one ', async function () {
-    const boundary = ether(1);
-
-    await this.crowdsale.addToDayOne(investor, boundary, {from: owner}).should.be.fulfilled;
+    await this.crowdsale.addToDayOne(investor, {from: owner}).should.be.fulfilled;
     await increaseTimeTo(this.whitelistStart);
     
-    const investment = ether(2);
+    const investment = ether(7);
     await this.crowdsale.buyTokens(investor, {value: investment, from: investor}).should.be.rejectedWith(EVMRevert);
 
   });
 
   it('accept payments outside boundaries from whitelisted on day two ', async function () {
-    const boundary = ether(1);
-    await this.crowdsale.addToDayOne(investor, boundary, {from: owner}).should.be.fulfilled;
+    await this.crowdsale.addToDayOne(investor, {from: owner}).should.be.fulfilled;
     
-    const investment =  ether(10);
+    const investment = ether(7);
     await increaseTimeTo(this.whitelistDayTwoStart + duration.minutes(1));
     await this.crowdsale.buyTokens(investor, {value: investment, from: investor}).should.be.fulfilled;
 
   });
 
   it('accept payments from automatically whitelisted on day two if purchased on day one', async function () {
-    const boundary = ether(1);
-    await this.crowdsale.addToDayOne(investor, boundary, {from: owner}).should.be.fulfilled;
+    await this.crowdsale.addToDayOne(investor, {from: owner}).should.be.fulfilled;
     
     await increaseTimeTo(this.whitelistStart);
     const investment =  ether(1);

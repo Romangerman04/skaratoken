@@ -13,18 +13,24 @@ contract Whitelist is Ownable {
   uint256 startWhitelisting;
   uint256 startDayTwo;
   uint256 cap; //absolute max investment boundary
+  uint256 defaultBoundary; //absolute max investment boundary
  
-  function Whitelist(uint256 _startWhitelisting, uint256 _cap) public {
+  function Whitelist(uint256 _startWhitelisting, uint256 _cap, uint256 _defaultBoundary) public {
     startWhitelisting = _startWhitelisting;
     cap = _cap;
     startDayTwo = _startWhitelisting + 1 days;
+    defaultBoundary = _defaultBoundary;
   }
 
-  function addToDayOne(address investor, uint256 amount) onlyOwner public {
+  function addToDayOne(address investor) public onlyOwner {
+    dayOneWhitelist[investor] = defaultBoundary;
+  }
+
+  function addToDayOneWithCustomBoundary(address investor, uint256 amount) public onlyOwner {
     dayOneWhitelist[investor] = amount;
   }
 
-  function removeFromDayOne(address investor) onlyOwner public {
+  function removeFromDayOne(address investor) public onlyOwner {
     delete dayOneWhitelist[investor];
   }
 
@@ -36,7 +42,7 @@ contract Whitelist is Ownable {
     dayTwoWhitelist[investor] = cap;
   }
 
-  function removeFromDayTwo(address investor) onlyOwner public {
+  function removeFromDayTwo(address investor)  public onlyOwner {
     delete dayTwoWhitelist[investor];
   }
 

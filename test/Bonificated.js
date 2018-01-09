@@ -71,7 +71,7 @@ contract('Bonificated', function ([owner, investor, presaler]) {
       
       const investment = ether(1);
       const expectedBonus = new BigNumber(15);
-      await this.crowdsale.addToDayOne(investor, investment, {from: owner}).should.be.fulfilled;
+      await this.crowdsale.addToDayOne(investor, {from: owner}).should.be.fulfilled;
       
       const tokensNoBonus = investment*RATE;
 
@@ -92,7 +92,7 @@ contract('Bonificated', function ([owner, investor, presaler]) {
       
       const investment = ether(1);
       const expectedBonus = new BigNumber(15);
-      await this.crowdsale.addToDayOne(investor, investment, {from: owner}).should.be.fulfilled;
+      await this.crowdsale.addToDayOne(investor, {from: owner}).should.be.fulfilled;
       
       const tokensNoBonus = investment*RATE;
 
