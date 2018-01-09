@@ -16,7 +16,7 @@ const SkaraToken = artifacts.require('SkaraToken');
 const TokenVesting = artifacts.require('TokenVesting');
 
 contract('Vesting', function ([owner, presaler, unreleaser, halfreleaser, fullreleaser]) {
-  const RATE = new BigNumber(10);
+  const RATE = new BigNumber(1000);
   const CAP  = ether(100);
 
   const PRE_SALER_DURATION = duration.weeks(24);
@@ -171,9 +171,9 @@ contract('Vesting', function ([owner, presaler, unreleaser, halfreleaser, fullre
     await halfreleaserVestingContract.release(this.token.address, {from:halfreleaser});
     await fullreleaserVestingContract.release(this.token.address, {from:fullreleaser});
 
-    console.log("Ureleased url:", "http://localhost:3000/" + unreleaserVestingContractAddress + "/" + this.token.address);
-    console.log("Half released url:", "http://localhost:3000/" + halfreleaserVestingContractAddress + "/" + this.token.address);
-    console.log("Full released url:", "http://localhost:3000/" + fullreleaserVestingContractAddress + "/" + this.token.address);
+    console.log("Ureleased url:", "https://fraylopez.gitlab.io/skaravesting/" + unreleaserVestingContractAddress + "/" + this.token.address);
+    console.log("Half released url:", "https://fraylopez.gitlab.io/skaravesting/" + halfreleaserVestingContractAddress + "/" + this.token.address);
+    console.log("Full released url:", "https://fraylopez.gitlab.io/skaravesting/" + fullreleaserVestingContractAddress + "/" + this.token.address);
   });
 
  });
