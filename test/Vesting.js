@@ -15,27 +15,16 @@ const SkaraCrowdsale = artifacts.require('SkaraCrowdsale');
 const SkaraToken = artifacts.require('SkaraToken');
 const TokenVesting = artifacts.require('TokenVesting');
 
-contract('Vesting', function ([owner, presaler, unreleaser, halfreleaser, fullreleaser]) {
+contract('Vesting', function ([owner, presaler, unreleaser, halfreleaser, fullreleaser, postsaler, team]) {
   const RATE = new BigNumber(1000);
   const CAP  = ether(100);
 
   const PRE_SALER_DURATION = duration.weeks(24);
+  const TEAM_CLIFF = duration.years(3);
 
   before(async function() {
     //Advance to the next block to correctly read time in the solidity "now" function interpreted by testrpc
     await advanceBlock()
-
-    this.beforeStart = latestTime() + duration.minutes(1);
-    this.startTime = this.beforeStart + duration.weeks(2);
-    var _duration =   duration.weeks(4);
-    this.endTime =   this.startTime + _duration;
-    this.afterEndTime = this.endTime + duration.seconds(1);
-    
-    this.vestingStart = this.endTime;
-    this.vestingCliff = duration.weeks(12);
-    
-    this.crowdsale = await SkaraCrowdsale.new(CAP, this.startTime,  this.endTime, RATE, owner, {from: owner});
-    this.token = await SkaraToken.at(await this.crowdsale.token());
   })
 
   beforeEach(async function () {
@@ -46,11 +35,17 @@ contract('Vesting', function ([owner, presaler, unreleaser, halfreleaser, fullre
     this.endTime =   this.startTime + _duration;
     this.afterEndTime = this.endTime + duration.seconds(1);
     
+    this.whitelistStart = this.startTime + duration.minutes(1); // +1 minute so it starts after contract instantiation
+    this.whitelistDayTwoStart = this.whitelistStart + duration.days(1);
+    this.whitelistEnd = this.whitelistStart + duration.days(2);
+
     this.vestingStart = this.endTime;
     this.vestingCliff = duration.weeks(12);
     
     this.crowdsale = await SkaraCrowdsale.new(CAP, this.startTime,  this.endTime, RATE, owner, {from: owner});
     this.token = await SkaraToken.at(await this.crowdsale.token());
+
+    
   });
 
   it('add presaler before crowsale start', async function () {
@@ -143,6 +138,41 @@ contract('Vesting', function ([owner, presaler, unreleaser, halfreleaser, fullre
     presealerBalance.should.be.bignumber.below(investment*RATE);
     (vestingBalance.add(presealerBalance)).should.be.bignumber.equal(investment*RATE);
   
+  });
+
+  it('allow vesting revoke and claim', async function () {
+    //simulate token sale
+    //simulate token sale
+    await increaseTimeTo(this.whitelistEnd + duration.days(2)); //after bonus
+    
+    const investment = ether(10);
+    await this.crowdsale.buyTokens(presaler, {value:investment, from: presaler}).should.be.fulfilled;
+        
+    //setup postsaler
+    const postsalerAmount = new BigNumber(10);
+    await this.crowdsale.addTeamMember(team, postsalerAmount, {from:owner});
+
+    const storedAmount = await this.crowdsale.getPostsalerAmount(team);
+    storedAmount.should.be.bignumber.equal(postsalerAmount);
+
+    await increaseTimeTo(this.afterEndTime);
+  
+    await this.crowdsale.finalize({from:owner}).should.be.fulfilled;
+    const releasableAmount = await this.crowdsale.getReleasableAmount();
+    await this.crowdsale.claimFromPostsaler(team, {from:team}).should.be.fulfilled;
+    
+    //vesting flow
+    const hasVesting = await this.crowdsale.hasTokenVesting(team);
+    hasVesting.should.be.true;
+
+    const vestingContractAddress = await this.crowdsale.getVestingAddress(team);
+    const vestingBalance = await this.token.balanceOf(vestingContractAddress);
+
+    await this.crowdsale.revokeVesting(team);
+    await this.crowdsale.claimRest();
+    
+    const skaraBalance = await this.token.balanceOf(owner);
+    skaraBalance.should.be.bignumber.equal(vestingBalance);
   });
 
   it('inspectable vestings through webapp', async function () {

@@ -10,18 +10,7 @@ import './VestingManager.sol';
 import './PreSale.sol';
 import './PostSale.sol';
 
-/**
- * @title SampleCrowdsale
- * @dev This is an example of a fully fledged crowdsale.
- * The way to add new features to a base crowdsale is by multiple inheritance.
- * In this example we are providing following extensions:
- * CappedCrowdsale - sets a max boundary for raised funds
- * RefundableCrowdsale - set a min goal to be reached and returns funds if it's not met
- *
- * After adding multiple features it's good practice to run integration tests
- * to ensure that subcontracts works together as intended.
- */
-//contract SkaraCrowdsale is CappedCrowdsale, BonificatedCrowdsale, TokenVesting {
+
 contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, Whitelist, VestingManager, PreSale, PostSale { 
   using SafeMath for uint256;
 
@@ -152,7 +141,6 @@ contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, W
     }
     return super.validPurchase();
   }
-  
 
   /** 
   * Handles beneficiaries in diferent sale periods
@@ -207,6 +195,27 @@ contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, W
     }
     
     _finishPostsaleClaim(who, tokens); //will log the token claim and prevent future claims 
+  }
+
+  /**
+  * Transfer of this contract balance to skara
+  * used for claiming back tokens from revoked vesting contracts
+  */
+  function revokeVesting(address beneficiary) public onlyOwner {
+    require(hasTokenVesting(beneficiary));
+    TokenVesting vesting = getVestingAddress(beneficiary);
+    vesting.revoke(token);
+  }
+   /**
+  * Transfer of this contract balance to skara
+  * used for claiming back tokens from revoked vesting contracts
+  */
+  function claimRest() public onlyOwner {
+    uint256 thisBalance = token.balanceOf(this);
+
+    if(thisBalance > 0) {
+      token.transfer(skaraWallet, thisBalance);
+    }
   }
   
 }
