@@ -7,18 +7,27 @@ import './Bonificated.sol';
 import './Whitelist.sol';
 import './SkaraToken.sol';
 import './VestingManager.sol';
-import './PreSale.sol';
+import './CappedPreSale.sol';
 import './PostSale.sol';
 
 
-contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, Whitelist, VestingManager, PreSale, PostSale { 
+contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, Whitelist, VestingManager, CappedPreSale, PostSale { 
   using SafeMath for uint256;
+
+  //PreSale
+  uint256 public constant MIN_PRESALE_INVESTMENT = 5 ether; 
+  uint256 public constant LOW_PRESALE_INVESTMENT = 100 ether; 
+  uint256 public constant MEDIUM_PRESALE_INVESTMENT = 500 ether; 
+  uint256 public constant MAX_PRESALE_INVESTMENT = 2000 ether; 
 
   //Whitelist
   uint256 public constant WHITELIST_DURATION = 2 days; 
   uint256 public constant DEFAULT_BOUNDARY = 5 ether; 
 
   //Bonificated
+  uint256 public constant BONUS_PRESALE_LOW = 30; 
+  uint256 public constant BONUS_PRESALE_MEDIUM = 35; 
+  uint256 public constant BONUS_PRESALE_HIGH = 45; 
   uint256 public constant BONUS_DURATION = 3 days; 
   uint256 public constant BONUS_DAY_ONE = 15; 
   uint256 public constant BONUS_DAY_TWO = 10; 
@@ -45,11 +54,23 @@ contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, W
   
   event FinalClaim(uint256 amount);
 
-  function SkaraCrowdsale(uint256 _cap, uint256 _startTime, uint256 _endTime, uint256 _rate, address _skaraWallet) public
+  function SkaraCrowdsale(uint256 _cap, uint256 _presaleCap, uint256 _startTime, uint256 _endTime, uint256 _rate, address _skaraWallet) public
     CappedCrowdsale(_cap)
     FinalizableCrowdsale()
+    CappedPreSale(_presaleCap, _startTime, MIN_PRESALE_INVESTMENT, MAX_PRESALE_INVESTMENT)
     Whitelist(_startTime, _cap, DEFAULT_BOUNDARY)
-    Bonificated(_startTime, BONUS_DURATION, BONUS_DAY_ONE, BONUS_DAY_TWO, BONUS_DAY_THREE)
+    Bonificated(
+      MIN_PRESALE_INVESTMENT, 
+      BONUS_PRESALE_LOW,
+      MEDIUM_PRESALE_INVESTMENT, 
+      BONUS_PRESALE_MEDIUM, 
+      MAX_PRESALE_INVESTMENT, 
+      BONUS_PRESALE_HIGH, 
+      _startTime, 
+      BONUS_DURATION, 
+      BONUS_DAY_ONE, 
+      BONUS_DAY_TWO, 
+      BONUS_DAY_THREE)
     Crowdsale(_startTime, _endTime, _rate, _skaraWallet)
     VestingManager(_endTime)
   {
@@ -81,7 +102,7 @@ contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, W
     uint256 tokens = weiAmount.mul(rate);
 
     //add bonus
-    uint256 currentBonusMultiplier = getBonus(beneficiary).add(100);
+    uint256 currentBonusMultiplier = getBonus(beneficiary, weiAmount).add(100);
     tokens = tokens.mul(currentBonusMultiplier).div(100);
     
     //update state
@@ -124,31 +145,13 @@ contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, W
     _addPostsaler(who, amount);
   }
 
-  /**
-  * Override CappedCrowdsale#validPurchase to add presale logic (allow buyTokens before _startTime)
-  * has to check manually CappedCrowdsale#validPurchase (and other inheritances) 
-  * since inheritance chain is broken in presale cases
-  * @return true if the transaction can buy tokens
-  */
-  function validPurchase() internal view returns (bool) {
-
-    if(now < startTime) {
-      //presale
-      bool nonZeroPurchase = msg.value != 0;
-      bool withinCap = weiRaised.add(msg.value) <= cap;
-      
-      return nonZeroPurchase && withinCap;
-    }
-    return super.validPurchase();
-  }
-
   /** 
   * Handles beneficiaries in diferent sale periods
   * @return true if the beneficiary can buy tokens
   */
   function validBeneficiary(address beneficiary) internal view returns (bool) {
     if(now < startTime) {
-      return isPresaler(beneficiary);
+      return isPresaler(beneficiary, msg.value);
     } 
     
     if(isWhitelistPeriod()) {
