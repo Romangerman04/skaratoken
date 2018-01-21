@@ -3,12 +3,15 @@ pragma solidity ^0.4.18;
 import 'zeppelin-solidity/contracts/math/SafeMath.sol';
 import 'zeppelin-solidity/contracts/ownership/Ownable.sol';
 import 'zeppelin-solidity/contracts/crowdsale/Crowdsale.sol';
+import 'zeppelin-solidity/contracts/math/SafeMath.sol';
 
 /**
  * @title PreSale
  * @dev Manages a presale list of contributors with investment boundaries
  */
 contract CappedPreSale is Ownable {
+  using SafeMath for uint256;
+
   uint256 presaleCap;
   uint256 presaleEnd;
   uint256 minInvestment;
@@ -45,15 +48,12 @@ contract CappedPreSale is Ownable {
     return investment >= minInvestment || presalers[investor] != 0;
   }
 
-  // overriding Crowdsale#validPurchase to add extra cap logic
+  // add cap logic
   // @return true if investors can buy at the moment
-  function validPurchase() internal view returns (bool) {
-    if(now < presaleEnd)
-    {
-      bool withinCap = weiRaised.add(msg.value) <= presaleCap;
-      return withinCap;
-    }
-    return super.validPurchase();
+  function validCappedPresalePurchase(uint256 weiRaised, uint256 investment) internal view returns (bool) {
+    require(now < presaleEnd);
+    bool withinCap = weiRaised.add(investment) <= presaleCap;
+    return withinCap;
   }
 
 }

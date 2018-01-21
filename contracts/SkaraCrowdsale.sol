@@ -59,23 +59,23 @@ contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, W
     FinalizableCrowdsale()
     CappedPreSale(_presaleCap, _startTime, MIN_PRESALE_INVESTMENT, MAX_PRESALE_INVESTMENT)
     Whitelist(_startTime, _cap, DEFAULT_BOUNDARY)
-    Bonificated(
-      MIN_PRESALE_INVESTMENT, 
-      BONUS_PRESALE_LOW,
-      MEDIUM_PRESALE_INVESTMENT, 
-      BONUS_PRESALE_MEDIUM, 
-      MAX_PRESALE_INVESTMENT, 
-      BONUS_PRESALE_HIGH, 
-      _startTime, 
-      BONUS_DURATION, 
-      BONUS_DAY_ONE, 
-      BONUS_DAY_TWO, 
-      BONUS_DAY_THREE)
     Crowdsale(_startTime, _endTime, _rate, _skaraWallet)
     VestingManager(_endTime)
   {
     skaraWallet = _skaraWallet;
     endTime = _endTime;
+    _setPresaleBonus(MIN_PRESALE_INVESTMENT, LOW_PRESALE_INVESTMENT, BONUS_PRESALE_LOW, MEDIUM_PRESALE_INVESTMENT, BONUS_PRESALE_MEDIUM, MAX_PRESALE_INVESTMENT, BONUS_PRESALE_HIGH);
+    _setOpenSaleBonus(_startTime, BONUS_DURATION, BONUS_DAY_ONE, BONUS_DAY_TWO, BONUS_DAY_THREE);
+    setupFixedVestings(
+      LOW_PRESALE_INVESTMENT,
+      PRE_SALE_VESTING_CLIFF, 
+      PRE_SALE_VESTING_CLIFF.mul(4),
+      MEDIUM_PRESALE_INVESTMENT, 
+      PRE_SALE_VESTING_CLIFF, 
+      PRE_SALE_VESTING_CLIFF.mul(2),
+      MAX_PRESALE_INVESTMENT,
+      PRE_SALE_VESTING_CLIFF,
+      PRE_SALE_VESTING_CLIFF);
   }
 
   function createTokenContract() internal returns (MintableToken) {
@@ -111,9 +111,15 @@ contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, W
     //vesting
     if(hasTokenVesting(beneficiary)) {
       //was previously added to vesting list, already has a vesting config
-      TokenVesting vesting = createTokenVesting(beneficiary);
+      TokenVesting customVesting = createTokenVesting(beneficiary);
       //mint tokens for vesting contract
-      token.mint(vesting, tokens);
+      token.mint(customVesting, tokens);
+    }
+    else if(now < startTime) {
+      //presaler without custom config
+      TokenVesting fixedVesting = createTokenVestingFromInvestment(beneficiary, weiAmount);
+      //mint tokens for vesting contract
+      token.mint(fixedVesting, tokens);
     }
     else{
       //mint tokens for beneficiary
@@ -160,6 +166,26 @@ contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, W
 
     return true;
   }
+
+    /**
+  * Override CappedCrowdsale#validPurchase to add presale logic (allow buyTokens before _startTime)
+  * has to check manually CappedCrowdsale#validPurchase (and other inheritances) 
+  * since inheritance chain is broken in presale cases
+  * @return true if the transaction can buy tokens
+  */
+  function validPurchase() internal view returns (bool) {
+
+    if(now < startTime) {
+      //presale
+      bool nonZeroPurchase = msg.value != 0;
+      bool withinPresaleCap = validCappedPresalePurchase(weiRaised, msg.value);
+      
+      return nonZeroPurchase && withinPresaleCap;
+    }
+    return super.validPurchase();
+  }
+
+
 
   /**
    * @dev Override FinalizableCrowdsale#finalization to add final token allocation

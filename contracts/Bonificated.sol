@@ -10,6 +10,7 @@ import 'zeppelin-solidity/contracts/ownership/Ownable.sol';
 contract Bonificated is Ownable {
   using SafeMath for uint256;
 
+  uint256 public investmentMin; 
   uint256 public investmentLow; 
   uint256 public bonusPresaleLow; 
   uint256 public investmentMedium; 
@@ -25,28 +26,35 @@ contract Bonificated is Ownable {
 
   mapping(address => uint256) customBonuses; 
 
-  function Bonificated(
+  function _setPresaleBonus (
+    uint256 _investmentMin, 
     uint256 _investmentLow, 
     uint256 _bonusPresaleLow, 
     uint256 _investmentMedium, 
     uint256 _bonusPresaleMedium, 
     uint256 _investmentHigh, 
-    uint256 _bonusPresaleHigh, 
-    uint256 _bonusStartTime,
-    uint256 _bonusDuration, 
-    uint256 _bonusDayOne,
-    uint256 _bonusDayTwo,
-    uint256 _bonusDayThree) public 
+    uint256 _bonusPresaleHigh
+  ) internal  
   {
-    //presale bonus
+    //presale bonus config
+    investmentMin = _investmentMin;
     investmentLow = _investmentLow;
     bonusPresaleLow = _bonusPresaleLow;
     investmentMedium = _investmentMedium;
     bonusPresaleMedium = _bonusPresaleMedium;
     investmentHigh = _investmentHigh;
     bonusPresaleHigh = _bonusPresaleHigh;
+  }
 
-    //whitelist + open sale bonus
+  function _setOpenSaleBonus (
+    uint256 _bonusStartTime,
+    uint256 _bonusDuration, 
+    uint256 _bonusDayOne,
+    uint256 _bonusDayTwo,
+    uint256 _bonusDayThree
+  ) internal 
+  {
+    //whitelist + open sale bonus config
     bonusStartTime = _bonusStartTime;
     bonusDuration = _bonusDuration;
     bonusDayOne = _bonusDayOne;
@@ -78,14 +86,16 @@ contract Bonificated is Ownable {
       || now >= bonusStartTime.add(bonusDuration))
     {
       //presale period with bonus scaled to investment
-      if(investment < investmentLow)
+      if(investment < investmentMin)
         return 0; //shouldn't happen, for saffety
-      else if(investment < investmentMedium)
+      else if(investment < investmentLow)
         return bonusPresaleLow;
-      else if(investment < investmentHigh)
+      else if(investment < investmentMedium)
         return bonusPresaleMedium;
-      else 
+      else if(investment < investmentHigh)
         return bonusPresaleHigh;
+      else 
+        return bonusPresaleHigh; //shouldn't happen, for saffety
     }
 
     if(now < bonusStartTime + 1 days) return bonusDayOne;
