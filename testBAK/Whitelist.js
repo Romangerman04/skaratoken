@@ -15,8 +15,15 @@ const SkaraCrowdsale = artifacts.require('SkaraCrowdsale');
 const SkaraToken = artifacts.require('SkaraToken');
 
 contract('Whitelist', function ([owner, wallet, investor]) {
-  const RATE = new BigNumber(500);
-  const CAP  = ether(10);
+  const RATE = new BigNumber(10);
+  const CAP  = ether(1000);
+  const PRESALE_CAP  = ether(600);
+
+  const MIN_INVESTMENT  = ether(5); 
+  const investmentLow  = ether(10); 
+  const investmentMedium  = ether(20); 
+  const MAX_INVESTMENT  = ether(30); 
+
   const DEFAULT_BOUNDARY  = ether(5);
 
   before(async function() {
@@ -35,7 +42,18 @@ contract('Whitelist', function ([owner, wallet, investor]) {
     this.whitelistDayTwoStart = this.whitelistStart + duration.days(1);
     this.whitelistEnd = this.whitelistStart + duration.days(2);
     
-    this.crowdsale = await SkaraCrowdsale.new(CAP, this.startTime,  this.endTime, RATE, owner, {from: owner});
+    this.crowdsale = 
+      await SkaraCrowdsale.new(
+        CAP,
+        PRESALE_CAP, 
+        investmentLow, 
+        investmentMedium, 
+        this.startTime,  
+        this.endTime, 
+        RATE, 
+        owner, 
+        {from: owner});
+
     this.token = await SkaraToken.at(await this.crowdsale.token());
   });
 

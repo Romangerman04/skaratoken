@@ -43,17 +43,39 @@ contract CappedPreSale is Ownable {
     return boundary != 0 ? boundary : maxInvestment;
   }
 
-  function isPresaler(address investor, uint256 investment) public view returns (bool) {
-    //presaler if investment above minInvestment or present in presaler list
-    return investment >= minInvestment || presalers[investor] != 0;
+  function isValidPresaler(address investor, uint256 investment) public view returns (bool) {
+    //presaler if current time within presale period, and is custom presaler or within investment boundaries
+    return  isPresalePeriod() 
+            && 
+            (isCustomPresaler(investor) 
+              || 
+              (investment >= minInvestment || investment <= maxInvestment));
   }
+
+  function isPresalePeriod() public view returns (bool) {
+    return now < presaleEnd;
+  }
+
+  function isCustomPresaler(address investor) public view returns (bool) {
+    return presalers[investor] != 0;
+  }
+
 
   // add cap logic
   // @return true if investors can buy at the moment
   function validCappedPresalePurchase(uint256 weiRaised, uint256 investment) internal view returns (bool) {
-    require(now < presaleEnd);
     bool withinCap = weiRaised.add(investment) <= presaleCap;
-    return withinCap;
+    bool withinInvestmentBoundaries = 
+      investment >= minInvestment 
+      && 
+      investment <= maxInvestment;
+
+    return  isPresalePeriod() 
+            && 
+            withinCap
+            && 
+            withinInvestmentBoundaries;
   }
+
 
 }

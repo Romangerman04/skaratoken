@@ -16,7 +16,14 @@ const SkaraToken = artifacts.require('SkaraToken');
 
 contract('Finalization', function ([owner, investor, team, advisor, bounty]) {
   const RATE = new BigNumber(10);
-  const CAP  = ether(100);
+  const CAP  = ether(1000);
+  const PRESALE_CAP  = ether(600);
+
+  const MIN_INVESTMENT  = ether(5); 
+  const investmentLow  = ether(10); 
+  const investmentMedium  = ether(20); 
+  const MAX_INVESTMENT  = ether(30); 
+
   const SALE_ALLOCATION_PERCENTAGE  = 70;
   const POSTSALE_ALLOCATION_PERCENTAGE  = 30;
   const SAFETY_ALLOCATION = new BigNumber(1000);;
@@ -37,7 +44,18 @@ contract('Finalization', function ([owner, investor, team, advisor, bounty]) {
     this.whitelistDayTwoStart = this.whitelistStart + duration.days(1);
     this.whitelistEnd = this.whitelistStart + duration.days(2);
 
-    this.crowdsale = await SkaraCrowdsale.new(CAP, this.startTime,  this.endTime, RATE, owner, {from: owner});
+    this.crowdsale = 
+      await SkaraCrowdsale.new(
+        CAP,
+        PRESALE_CAP, 
+        investmentLow, 
+        investmentMedium, 
+        this.startTime,  
+        this.endTime, 
+        RATE, 
+        owner, 
+        {from: owner});
+
     this.token = await SkaraToken.at(await this.crowdsale.token());
   });
 
@@ -92,8 +110,8 @@ contract('Finalization', function ([owner, investor, team, advisor, bounty]) {
     await this.crowdsale.claimFromPostsaler(team, {from:team}).should.be.fulfilled;
     
     //vesting flow
-    const hasVesting = await this.crowdsale.hasTokenVesting(team);
-    hasVesting.should.be.true;
+    const hasCustomTokenVesting = await this.crowdsale.hasCustomTokenVesting(team);
+    hasCustomTokenVesting.should.be.true;
 
     const vestingContractAddress = await this.crowdsale.getVestingAddress(team);
     const vestingBalance = await this.token.balanceOf(vestingContractAddress);
@@ -121,8 +139,8 @@ contract('Finalization', function ([owner, investor, team, advisor, bounty]) {
     await this.crowdsale.claimFromPostsaler(advisor, {from:advisor}).should.be.fulfilled;
     
     //vesting flow
-    const hasVesting = await this.crowdsale.hasTokenVesting(advisor);
-    hasVesting.should.be.true;
+    const hasCustomTokenVesting = await this.crowdsale.hasCustomTokenVesting(advisor);
+    hasCustomTokenVesting.should.be.true;
 
     const vestingContractAddress = await this.crowdsale.getVestingAddress(advisor);
     const vestingBalance = await this.token.balanceOf(vestingContractAddress);
@@ -150,8 +168,8 @@ contract('Finalization', function ([owner, investor, team, advisor, bounty]) {
     await this.crowdsale.claimFromPostsaler(bounty, {from:bounty}).should.be.fulfilled;
     
     //vesting flow
-    const hasVesting = await this.crowdsale.hasTokenVesting(bounty);
-    hasVesting.should.be.false;
+    const hasCustomTokenVesting = await this.crowdsale.hasCustomTokenVesting(bounty);
+    hasCustomTokenVesting.should.be.false;
   
     const postsalerBalance = await this.token.balanceOf(bounty);
     postsalerBalance.should.be.bignumber.equal(postsalerAmount);

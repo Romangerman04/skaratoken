@@ -1,0 +1,37 @@
+﻿ICOrating
+THE TERMS OF THE SMART CONTRACT
+
+https://lh5.googleusercontent.com/S4d1LVzk01ZJOWKJeBGcHT2G-sjsWSEJ-0vOE6s-uCsp7HIMYXE9x27GWmMUNKDHnqwlpnJ2ul7QaZYg6OKD9ROgmVSfdeocyTXK3DJA6NIFQ_XswuUkffiho2sRjN3j25kQSZBG 
+
+Web: icorating.com
+Email: info@icorating.com
+Twitter: @IcoRating
+
+
+The terms of the smart contract correspond to the technical description given by the founder.
+The smart contract is based on the reliable OpenZeppelin Solidity framework.
+We detect no errors in the logic of the smart contract; the probability of errors in the overflow of variables is excluded due to the use of secure mathematical functions.
+Access rights to smart contract methods are configured correctly, and exclude any unauthorized access to the administration functions of the Token Sale.
+Parameters for Token Sale implementation conditions are specified once at the time of creation of the smart contract; they cannot be changed during the sale.
+Thus, investors are protected from undesirable changes in the terms of trade.
+The token is a standard, issue-grade, burnable OpenZeppelin token without any significant modifications.
+ 
+Access to token emission is possible only through the existing sales contract. The possibility of conferring rights to issue tokens to another contract or a third party is excluded.
+Of all the audits conducted by our team, your smart contract is the only one for which we were unable to identify any critical points. This is why our report is relatively brief.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+The information contained in the document is for informational purposes only. The views expressed in this document are solely personal stance of the ICOrating Team, based on data from open access and information that developers provided to the team through Skype, email or other means of communication.
+Our goal is to increase the transparency and reliability of the young ICO market and to minimize the risk of fraud.
+We appreciate feedback with constructive comments, suggestions and ideas on how to make the analysis more comprehensive and informative.

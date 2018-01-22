@@ -14,11 +14,11 @@ import './PostSale.sol';
 contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, Whitelist, VestingManager, CappedPreSale, PostSale { 
   using SafeMath for uint256;
 
+  //global
+  uint256 public constant MAX_INVESTMENT = 2000 ether; //larger investment should go through custom presale setup process 
+
   //PreSale
   uint256 public constant MIN_PRESALE_INVESTMENT = 5 ether; 
-  uint256 public constant LOW_PRESALE_INVESTMENT = 100 ether; 
-  uint256 public constant MEDIUM_PRESALE_INVESTMENT = 500 ether; 
-  uint256 public constant MAX_PRESALE_INVESTMENT = 2000 ether; 
 
   //Whitelist
   uint256 public constant WHITELIST_DURATION = 2 days; 
@@ -54,28 +54,48 @@ contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, W
   
   event FinalClaim(uint256 amount);
 
-  function SkaraCrowdsale(uint256 _cap, uint256 _presaleCap, uint256 _startTime, uint256 _endTime, uint256 _rate, address _skaraWallet) public
+  function SkaraCrowdsale(
+      uint256 _cap,
+      uint256 _presaleCap, 
+      uint256 _investmentLow, 
+      uint256 _investmentMedium, 
+      uint256 _startTime, 
+      uint256 _endTime, 
+      uint256 _rate, 
+      address _skaraWallet) public
     CappedCrowdsale(_cap)
     FinalizableCrowdsale()
-    CappedPreSale(_presaleCap, _startTime, MIN_PRESALE_INVESTMENT, MAX_PRESALE_INVESTMENT)
+    CappedPreSale(_presaleCap, _startTime, MIN_PRESALE_INVESTMENT, MAX_INVESTMENT)
     Whitelist(_startTime, _cap, DEFAULT_BOUNDARY)
     Crowdsale(_startTime, _endTime, _rate, _skaraWallet)
     VestingManager(_endTime)
   {
     skaraWallet = _skaraWallet;
     endTime = _endTime;
-    _setPresaleBonus(MIN_PRESALE_INVESTMENT, LOW_PRESALE_INVESTMENT, BONUS_PRESALE_LOW, MEDIUM_PRESALE_INVESTMENT, BONUS_PRESALE_MEDIUM, MAX_PRESALE_INVESTMENT, BONUS_PRESALE_HIGH);
-    _setOpenSaleBonus(_startTime, BONUS_DURATION, BONUS_DAY_ONE, BONUS_DAY_TWO, BONUS_DAY_THREE);
+    _setPresaleBonus(
+      MIN_PRESALE_INVESTMENT,
+      _investmentLow, 
+      BONUS_PRESALE_LOW, 
+      _investmentMedium, 
+      BONUS_PRESALE_MEDIUM, 
+      MAX_INVESTMENT, 
+      BONUS_PRESALE_HIGH);
+    _setOpenSaleBonus(
+      _startTime, 
+      BONUS_DURATION, 
+      BONUS_DAY_ONE, 
+      BONUS_DAY_TWO, 
+      BONUS_DAY_THREE);
     setupFixedVestings(
-      LOW_PRESALE_INVESTMENT,
+      _investmentLow,
       PRE_SALE_VESTING_CLIFF, 
-      PRE_SALE_VESTING_CLIFF.mul(4),
-      MEDIUM_PRESALE_INVESTMENT, 
+      PRE_SALE_VESTING_CLIFF,
+      _investmentMedium, 
       PRE_SALE_VESTING_CLIFF, 
       PRE_SALE_VESTING_CLIFF.mul(2),
-      MAX_PRESALE_INVESTMENT,
+      MAX_INVESTMENT,
       PRE_SALE_VESTING_CLIFF,
-      PRE_SALE_VESTING_CLIFF);
+      PRE_SALE_VESTING_CLIFF.mul(4));
   }
 
   function createTokenContract() internal returns (MintableToken) {
@@ -109,26 +129,25 @@ contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, W
     weiRaised = weiRaised.add(weiAmount);
 
     //vesting
-    if(hasTokenVesting(beneficiary)) {
-      //was previously added to vesting list, already has a vesting config
+    if(hasCustomTokenVesting(beneficiary)) {
+      //was previously added to vesting list, has a custom vesting config
       TokenVesting customVesting = createTokenVesting(beneficiary);
       //mint tokens for vesting contract
       token.mint(customVesting, tokens);
     }
-    else if(now < startTime) {
+    else if(isValidPresaler(beneficiary, weiAmount)) {
       //presaler without custom config
       TokenVesting fixedVesting = createTokenVestingFromInvestment(beneficiary, weiAmount);
       //mint tokens for vesting contract
       token.mint(fixedVesting, tokens);
     }
-    else{
+    else {
       //mint tokens for beneficiary
       token.mint(beneficiary, tokens);
     }
 
     TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
     forwardFunds();
-    
   }
 
   function setupPresaler(address who, uint256 amount, uint256 vestingDuration, uint256 bonus) public onlyOwner {
@@ -156,8 +175,8 @@ contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, W
   * @return true if the beneficiary can buy tokens
   */
   function validBeneficiary(address beneficiary) internal view returns (bool) {
-    if(now < startTime) {
-      return isPresaler(beneficiary, msg.value);
+    if(isPresalePeriod()) {
+      return isValidPresaler(beneficiary, msg.value);
     } 
     
     if(isWhitelistPeriod()) {
@@ -175,7 +194,7 @@ contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, W
   */
   function validPurchase() internal view returns (bool) {
 
-    if(now < startTime) {
+    if(isPresalePeriod()) {
       //presale
       bool nonZeroPurchase = msg.value != 0;
       bool withinPresaleCap = validCappedPresalePurchase(weiRaised, msg.value);
@@ -184,9 +203,6 @@ contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, W
     }
     return super.validPurchase();
   }
-
-
-
   /**
    * @dev Override FinalizableCrowdsale#finalization to add final token allocation
    */
@@ -212,8 +228,8 @@ contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, W
     require(tokens > 0);
 
     //vesting
-    if(hasTokenVesting(who)) {
-      //was previously added to vesting list, already has a vesting config
+    if(hasCustomTokenVesting(who)) {
+      //was previously added to vesting list, already has a custom vesting config
       TokenVesting vesting = createTokenVesting(who);
       //mint tokens for vesting contract
       token.mint(vesting, tokens);
@@ -231,7 +247,7 @@ contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, W
   * used for claiming back tokens from revoked vesting contracts
   */
   function revokeVesting(address beneficiary) public onlyOwner {
-    require(hasTokenVesting(beneficiary));
+    require(hasCustomTokenVesting(beneficiary));
     TokenVesting vesting = getVestingAddress(beneficiary);
     vesting.revoke(token);
   }
@@ -244,6 +260,7 @@ contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, W
 
     if(thisBalance > 0) {
       token.transfer(skaraWallet, thisBalance);
+      FinalClaim(thisBalance);
     }
   }
   

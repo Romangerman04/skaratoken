@@ -5,6 +5,7 @@ import latestTime from './helpers/latestTime'
 import EVMRevert from './helpers/EVMRevert'
 
 const BigNumber = web3.BigNumber;
+//BigNumber.config({ ERRORS: false }) //don't throw on >15 significant digits
 
 const should = require('chai')
   .use(require('chai-as-promised'))
@@ -16,19 +17,31 @@ const SkaraToken = artifacts.require('SkaraToken');
 
 contract('Bonificated', function ([owner, investor, presaler]) {
 
-    const RATE = new BigNumber(1000);
-    const CAP  = ether(100);
-    const PRESALE_CAP  = ether(60);
+    const RATE = new BigNumber(10);
+    const CAP  = ether(1000);
+    const PRESALE_CAP  = ether(600);
+
+    const MIN_INVESTMENT  = ether(5); 
+    const investmentLow  = ether(10); 
+    const investmentMedium  = ether(20); 
+    const MAX_INVESTMENT  = ether(30); 
     
     before(async function() {
       //Advance to the next block to correctly read time in the solidity "now" function interpreted by testrpc
       await advanceBlock()
+
+      
     })
   
     beforeEach(async function () {
 
+      //presale 
+      this.presaleStartTime = latestTime() + duration.minutes(1);
+      this.presaleDuration = this.presaleStartTime + duration.weeks(2);
+      this.presaleEnd = this.presaleStartTime + this.presaleDuration;
+
       //crowdsale
-      this.startTime = latestTime() + duration.weeks(1);
+      this.startTime = this.presaleEnd + duration.seconds(1);
       var _duration =  duration.weeks(1);
       this.endTime =   this.startTime + _duration;
       this.afterEndTime = this.endTime + duration.seconds(1);
@@ -43,12 +56,24 @@ contract('Bonificated', function ([owner, investor, presaler]) {
       this.bonusDuration = duration.days(3);
       this.afterBonusEnd = this.bonusStart + this.bonusDuration + duration.seconds(1);
     
-      this.crowdsale = await SkaraCrowdsale.new(CAP,PRESALE_CAP, this.startTime,  this.endTime, RATE, owner, {from: owner});
-      this.token = await SkaraToken.at(await this.crowdsale.token());
+      this.crowdsale = 
+        await SkaraCrowdsale.new(
+          CAP,
+          PRESALE_CAP, 
+          investmentLow, 
+          investmentMedium, 
+          this.startTime,  
+          this.endTime, 
+          RATE, 
+          owner, 
+          {from: owner});
 
+      this.token = await SkaraToken.at(await this.crowdsale.token());
     });
 
     it('purchase on presale with custom bonus', async function () {
+      await increaseTimeTo(this.presaleStartTime);
+
       const investment = ether(10);
       const customBonus = new BigNumber(41);
       const vestingDuration = duration.weeks(48);
@@ -69,28 +94,30 @@ contract('Bonificated', function ([owner, investor, presaler]) {
       balance.should.be.bignumber.above(tokensNoBonus);
     });
 
-    it('purchase on presale with low bonus', async function () {
-      const investment = ether(2.5);
+    it('purchase on presale in low investment range', async function () {
+      await increaseTimeTo(this.presaleStartTime);
+      const investment = investmentLow - ether(1);
       const expectedBonus = new BigNumber(30);
       
       const tokensNoBonus = investment*RATE;
       
       const bonus = await this.crowdsale.getBonus(presaler, investment);
       bonus.should.be.bignumber.equal(expectedBonus);
-
+      
       await this.crowdsale.buyTokens(presaler, {value: investment, from: presaler}).should.be.fulfilled;
       const expectedTokens = Math.floor(tokensNoBonus + tokensNoBonus*bonus/100);
-
+     
       const vestingContractAddress = await this.crowdsale.getVestingAddress(presaler);
       const balance = await this.token.balanceOf(vestingContractAddress);
       balance.should.be.bignumber.equal(expectedTokens);
       balance.should.be.bignumber.above(tokensNoBonus);
+      
     });
 
-    it('purchase on presale with medium bonus', async function () {
-      const investment = ether(20);
+    it('purchase on presale in medium investment range', async function () {
+      await increaseTimeTo(this.presaleStartTime);
+      const investment = investmentMedium - ether(1);
       const expectedBonus = new BigNumber(35);
-      const vestingDuration = duration.weeks(48);
       
       const tokensNoBonus = investment*RATE;
       
@@ -106,10 +133,10 @@ contract('Bonificated', function ([owner, investor, presaler]) {
       balance.should.be.bignumber.above(tokensNoBonus);
     })
 
-    it('purchase on presale with high bonus', async function () {
-      const investment = ether(80);
+    it('purchase on presale in high investment range', async function () {
+      await increaseTimeTo(this.presaleStartTime);
+      const investment = MAX_INVESTMENT - ether(1);
       const expectedBonus = new BigNumber(45);
-      const vestingDuration = duration.weeks(48);
       
       const tokensNoBonus = investment*RATE;
       
