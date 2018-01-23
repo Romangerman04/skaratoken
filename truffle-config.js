@@ -1,9 +1,12 @@
 require('babel-register');
 require('babel-polyfill');
+var fs = require('fs');
 
 var provider;
 var HDWalletProvider = require('truffle-hdwallet-provider');
-var mnemonic = '[REDACTED]';
+ 'spatial destroy sure stamp blossom want glove budget crater correct toss deal';
+
+ var mnemonic = fs.readFileSync('./_seed/seed.txt', 'utf8');
 
 if (!process.env.SOLIDITY_COVERAGE){
   provider = new HDWalletProvider(mnemonic, 'https://ropsten.infura.io/')
@@ -22,8 +25,12 @@ module.exports = {
       //from: "0x13ba42b19c25c0f6ecb7ab1c5db8d736231ecb94",
     },
     ropsten: {
-      provider: provider,
-      network_id: 3 // official id of the ropsten network
+      network_id: 3,
+      provider: function() {
+        return new HDWalletProvider(mnemonic, "https://ropsten.infura.io/pv0QcsGlqWaGaZvEsP9i")
+      },
+      gas: 3000000,
+      from: "0x0E56f09FDD14d61E456fbc45C618fD4FF10256e2"
     },
     coverage: {
       host: "localhost",

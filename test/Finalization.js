@@ -26,7 +26,11 @@ contract('Finalization', function ([owner, investor, team, advisor, bounty]) {
 
   const SALE_ALLOCATION_PERCENTAGE  = 70;
   const POSTSALE_ALLOCATION_PERCENTAGE  = 30;
-  const SAFETY_ALLOCATION = new BigNumber(1000);;
+  const SAFETY_ALLOCATION = new BigNumber(1000);
+
+  const ADVISOR_DURATION = duration.years(3);
+  const TEAM_DURATION = duration.years(3);
+  const TEAM_CLIFF = duration.years(1);
 
   before(async function() {
     //Advance to the next block to correctly read time in the solidity "now" function interpreted by testrpc
@@ -98,7 +102,7 @@ contract('Finalization', function ([owner, investor, team, advisor, bounty]) {
         
     //setup postsaler
     const postsalerAmount = new BigNumber(10);
-    await this.crowdsale.addTeamMember(team, postsalerAmount, {from:owner});
+    await this.crowdsale.addTeamMember(team, postsalerAmount, TEAM_DURATION, true, {from:owner});
 
     const storedAmount = await this.crowdsale.getPostsalerAmount(team);
     storedAmount.should.be.bignumber.equal(postsalerAmount);
@@ -128,7 +132,7 @@ contract('Finalization', function ([owner, investor, team, advisor, bounty]) {
         
     //setup postsaler
     const postsalerAmount = new BigNumber(10);
-    await this.crowdsale.addAdvisor(advisor, postsalerAmount, {from:owner});
+    await this.crowdsale.addAdvisor(advisor, postsalerAmount, ADVISOR_DURATION, this.vestingCliff,{from:owner});
 
     const storedAmount = await this.crowdsale.getPostsalerAmount(advisor);
     storedAmount.should.be.bignumber.equal(postsalerAmount);

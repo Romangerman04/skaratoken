@@ -3,6 +3,8 @@ pragma solidity ^0.4.18;
 import 'zeppelin-solidity/contracts/crowdsale/CappedCrowdsale.sol';
 import 'zeppelin-solidity/contracts/crowdsale/FinalizableCrowdsale.sol';
 import 'zeppelin-solidity/contracts/math/SafeMath.sol';
+import 'zeppelin-solidity/contracts/lifecycle/Destructible.sol';
+
 import './Bonificated.sol';
 import './Whitelist.sol';
 import './SkaraToken.sol';
@@ -11,7 +13,16 @@ import './CappedPreSale.sol';
 import './PostSale.sol';
 
 
-contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, Whitelist, VestingManager, CappedPreSale, PostSale { 
+contract SkaraCrowdsale is 
+  CappedCrowdsale, 
+  FinalizableCrowdsale, 
+  Bonificated,
+  Whitelist,
+  VestingManager, 
+  CappedPreSale, 
+  PostSale,
+  Destructible 
+  { 
   using SafeMath for uint256;
 
   //global
@@ -34,13 +45,8 @@ contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, W
   uint256 public constant BONUS_DAY_THREE = 5; 
 
   //vesting
-  uint256 public constant PRE_SALE_VESTING_CLIFF = 12 weeks; 
-
-  uint256 public constant ADVISORS_VESTING_CLIFF = 12 weeks; 
-  uint256 public constant ADVISORS_VESTING_DURATION = 2 years; 
-
-  uint256 public constant TEAM_VESTING_CLIFF = 3 years;  
-  uint256 public constant TEAM_VESTING_DURATION = 3 years; //no vesting period, just lockup
+  uint256 public constant DEAFULT_VESTING_CLIFF = 12 weeks; 
+  uint256 public constant TEAM_VESTING_CLIFF = 3 years; 
 
   //finalization
   uint256 public constant SALE_ALLOCATION_PERCENTAGE = 70; 
@@ -88,14 +94,14 @@ contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, W
       BONUS_DAY_THREE);
     setupFixedVestings(
       _investmentLow,
-      PRE_SALE_VESTING_CLIFF, 
-      PRE_SALE_VESTING_CLIFF,
+      DEAFULT_VESTING_CLIFF, 
+      DEAFULT_VESTING_CLIFF,
       _investmentMedium, 
-      PRE_SALE_VESTING_CLIFF, 
-      PRE_SALE_VESTING_CLIFF.mul(2),
+      DEAFULT_VESTING_CLIFF, 
+      DEAFULT_VESTING_CLIFF.mul(2),
       MAX_INVESTMENT,
-      PRE_SALE_VESTING_CLIFF,
-      PRE_SALE_VESTING_CLIFF.mul(4));
+      DEAFULT_VESTING_CLIFF,
+      DEAFULT_VESTING_CLIFF.mul(4));
   }
 
   function createTokenContract() internal returns (MintableToken) {
@@ -152,18 +158,18 @@ contract SkaraCrowdsale is CappedCrowdsale, FinalizableCrowdsale, Bonificated, W
 
   function setupPresaler(address who, uint256 amount, uint256 vestingDuration, uint256 bonus) public onlyOwner {
     _addPresaler(who, amount);
-    _addVestingConfig(who, PRE_SALE_VESTING_CLIFF, vestingDuration, false);
+    _addVestingConfig(who, DEAFULT_VESTING_CLIFF, vestingDuration, false);
     _addCustomBonus(who, bonus);
   }
 
-  function addTeamMember(address who, uint256 amount) public onlyOwner {
+  function addTeamMember(address who, uint256 amount, uint256 vestingDuration, bool revokable) public onlyOwner {
     _addPostsaler(who, amount);
-    _addVestingConfig(who, TEAM_VESTING_CLIFF, TEAM_VESTING_DURATION, true);
+    _addVestingConfig(who, TEAM_VESTING_CLIFF, vestingDuration, revokable);
   }
 
-  function addAdvisor(address who, uint256 amount) public onlyOwner {
+  function addAdvisor(address who, uint256 amount, uint256 vestingDuration) public onlyOwner {
     _addPostsaler(who, amount);
-    _addVestingConfig(who, ADVISORS_VESTING_CLIFF, ADVISORS_VESTING_DURATION, false);
+    _addVestingConfig(who, DEAFULT_VESTING_CLIFF, vestingDuration, false);
   }
 
   function addBountyMember(address who, uint256 amount) public onlyOwner {

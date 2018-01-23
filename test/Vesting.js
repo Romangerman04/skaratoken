@@ -26,7 +26,8 @@ contract('Vesting', function ([owner, presaler, unreleaser, halfreleaser, fullre
   const MAX_INVESTMENT  = ether(30); 
 
   const PRE_SALER_DURATION = duration.weeks(24);
-  const TEAM_CLIFF = duration.years(3);
+  const TEAM_DURATION = duration.years(3);
+  const TEAM_CLIFF = duration.years(1);
 
   before(async function() {
     //Advance to the next block to correctly read time in the solidity "now" function interpreted by testrpc
@@ -187,7 +188,7 @@ contract('Vesting', function ([owner, presaler, unreleaser, halfreleaser, fullre
         
     //setup postsaler
     const postsalerAmount = new BigNumber(10);
-    await this.crowdsale.addTeamMember(team, postsalerAmount, {from:owner});
+    await this.crowdsale.addTeamMember(team, postsalerAmount, TEAM_DURATION, true, {from:owner});
 
     const storedAmount = await this.crowdsale.getPostsalerAmount(team);
     storedAmount.should.be.bignumber.equal(postsalerAmount);
