@@ -12,8 +12,8 @@ import 'zeppelin-solidity/contracts/math/SafeMath.sol';
 contract CappedPreSale is Ownable {
   using SafeMath for uint256;
 
-  uint256 presaleCap;
-  uint256 presaleEnd;
+  uint256 public presaleCap;
+  uint256 public presaleEnd;
   uint256 minInvestment;
   uint256 maxInvestment;
 
@@ -63,7 +63,7 @@ contract CappedPreSale is Ownable {
 
   // add cap logic
   // @return true if investors can buy at the moment
-  function validCappedPresalePurchase(uint256 weiRaised, uint256 investment) internal view returns (bool) {
+  function validCappedPresalePurchase(uint256 weiRaised, uint256 investment) public view returns (bool) {
     bool withinCap = weiRaised.add(investment) <= presaleCap;
     bool withinInvestmentBoundaries = 
       investment >= minInvestment 

@@ -20,8 +20,8 @@ module.exports = {
       host: 'localhost',
       port: 8545,
       network_id: '*',
-      gas: 3000000,
-      from: "0x627306090abab3a6e1400e9345bc60c78a8bef57",
+      gas: 6721975,
+      //from: "0x627306090abab3a6e1400e9345bc60c78a8bef57",
       //from: "0x13ba42b19c25c0f6ecb7ab1c5db8d736231ecb94",
     },
     ropsten: {
@@ -30,7 +30,17 @@ module.exports = {
         return new HDWalletProvider(mnemonic, "https://ropsten.infura.io/pv0QcsGlqWaGaZvEsP9i")
       },
       gas: 3000000,
-      from: "0x0E56f09FDD14d61E456fbc45C618fD4FF10256e2"
+      from: "0x2e2d6a76b08f4e30a1387cb623288f53458d3c69"
+    },
+    
+    kovan: {
+      network_id: 42,
+      provider: function() {
+        return new HDWalletProvider(mnemonic, "https://kovan.infura.io/pv0QcsGlqWaGaZvEsP9i")
+      },
+      gas: 6721975,
+      //gasPrice: 30000000
+      //from: "0x0E56f09FDD14d61E456fbc45C618fD4FF10256e2"
     },
     coverage: {
       host: "localhost",
