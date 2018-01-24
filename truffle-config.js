@@ -39,7 +39,7 @@ module.exports = {
         return new HDWalletProvider(mnemonic, "https://kovan.infura.io/pv0QcsGlqWaGaZvEsP9i")
       },
       gas: 6721975,
-      //gasPrice: 30000000
+      gasPrice: 20000000
       //from: "0x0E56f09FDD14d61E456fbc45C618fD4FF10256e2"
     },
     coverage: {
@@ -48,6 +48,16 @@ module.exports = {
       port: 8555,
       gas: 0xfffffffffff,
       gasPrice: 0x01
+    },
+
+    main: {
+      network_id: 1,
+      provider: function() {
+        return new HDWalletProvider(mnemonic, "https://mainnet.infura.io/pv0QcsGlqWaGaZvEsP9i ")
+      },
+      gas: 6721975,
+      gasPrice: 10000000000
+      //from: "0x0E56f09FDD14d61E456fbc45C618fD4FF10256e2"
     },
     
   },
